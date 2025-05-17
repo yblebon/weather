@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dodge the Blocks</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            border: 1px solid #fff;
+            background-color: #333;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+        }
+        #gameOver {
+            display: none;
+            position: absolute;
+            color: red;
+            font-size: 32px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div id="gameOver">Game Over!<br>Press R to Restart</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverDisplay = document.getElementById('gameOver');
+
+        let score = 0;
+        let gameOver = false;
+        let player = { x: 180, y: 360, size: 20, speed: 5 };
+        let blocks = [];
+        let lastTime = performance.now();
+
+        // Draw player
+        function drawPlayer() {
+            ctx.fillStyle = '#0f0';
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+        }
+
+        // Create block
+        function createBlock() {
+            return {
+                x: Math.random() * (canvas.width - 20),
+                y: 0,
+                size: 20,
+                speed: 2 + Math.random()
+            };
+        }
+
+        // Draw block
+        function drawBlock(block) {
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(block.x, block.y, block.size, block.size);
+        }
+
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            if (gameOver && e.key === 'r') {
+                resetGame();
+            }
+            if (!gameOver) {
+                if (e.key === 'ArrowLeft' && player.x > 0) {
+                    player.x -= player.speed;
+                }
+                if (e.key === 'ArrowRight' && player.x < canvas.width - player.size) {
+                    player.x += player.speed;
+                }
+            }
+        });
+
+        // Game loop
+        function gameLoop(currentTime) {
+            if (gameOver) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+
+            // Update score based on time
+            score = Math.floor((currentTime - lastTime) / 100);
+            scoreDisplay.textContent = `Score: ${score}`;
+
+            // Create new blocks
+            if (Math.random() < 0.02) {
+                blocks.push(createBlock());
+            }
+
+            // Update and draw blocks
+            blocks = blocks.filter(block => block.y < canvas.height);
+            blocks.forEach(block => {
+                block.y += block.speed;
+                drawBlock(block);
+
+                // Check collision
+                if (
+                    player.x < block.x + block.size &&
+                    player.x + player.size > block.x &&
+                    player.y < block.y + block.size &&
+                    player.y + player.size > block.y
+                ) {
+                    gameOver = true;
+                    gameOverDisplay.style.display = 'block';
+                }
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Reset game
+        function resetGame() {
+            score = 0;
+            blocks = [];
+            gameOver = false;
+            player.x = 180;
+            lastTime = performance.now();
+            gameOverDisplay.style.display = 'none';
+            scoreDisplay.textContent = `Score: ${score}`;
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
