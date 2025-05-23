@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top 10 Most Volatile Cryptocurrencies - Last 24 Hours (Data Extracted: May 23, 2025, 11:24:00 AM CEST)</title>
+    <title>Top 10 Most Volatile Cryptocurrencies</title>
+    
+    <div id="error" class="error" style="display: none;"></div>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -55,7 +57,8 @@
     </style>
 </head>
 <body>
-    <h1>Top 10 Most Volatile Cryptocurrencies - Last 24 Hours (Data Extracted: May 23, 2025, 11:24:00 AM CEST)</h1>
+    <h1>Top 10 Most Volatile Cryptocurrencies</h1>
+            <p id="note" class="note">Note: Data extracted from CoinGecko API. Last fetch: <span id="fetchTime"></span>. Rankings are based on 24-hour price change percentage (absolute value) from CoinGecko API. Always conduct thorough research before trading, as cryptocurrencies are highly speculative and risky.</p>
     <div id="loading" class="loading">Loading data...</div>
     <table id="cryptoTable" style="display: none;">
         <thead>
@@ -69,8 +72,7 @@
         </thead>
         <tbody id="cryptoBody"></tbody>
     </table>
-    <p id="note" class="note">Note: Data extracted on May 23, 2025, 11:24:00 AM CEST from CoinGecko API. Last fetch: <span id="fetchTime"></span>. Rankings are based on 24-hour price change percentage (absolute value) from CoinGecko API. Always conduct thorough research before trading, as cryptocurrencies are highly speculative and risky.</p>
-    <div id="error" class="error" style="display: none;"></div>
+
 
     <script>
         async function fetchCryptoData() {
