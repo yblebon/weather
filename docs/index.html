@@ -3,224 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top 50 US Songs - Weekly Chart</title>
+    <title>Weekly Healthy Meal Planner</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
             background-color: #f4f4f4;
-            color: #333;
-        }
-        header {
-            background-color: #1a73e8;
-            color: white;
-            text-align: center;
-            padding: 2rem;
         }
         h1 {
-            margin: 0;
-            font-size: 2.5rem;
+            text-align: center;
+            color: #333;
         }
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 0 20px;
+        .input-container {
+            text-align: center;
+            margin-bottom: 20px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        input[type="number"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 200px;
+            margin-right: 10px;
         }
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+        input[type="checkbox"] {
+            margin: 10px;
         }
-        th {
-            background-color: #1a73e8;
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #28a745;
             color: white;
+            border: none;
+            cursor: pointer;
         }
-        tr:hover {
-            background-color: #f1f1f1;
+        button:hover {
+            background-color: #218838;
         }
-        .rank {
-            width: 10%;
-            font-weight: bold;
+        #mealPlan {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        .song-title {
-            width: 25%;
+        .day {
+            margin-bottom: 20px;
         }
-        .artist {
-            width: 25%;
-        }
-        .weeks {
-            width: 15%;
-        }
-        .peak {
-            width: 15%;
-        }
-        .lyrics {
-            width: 10%;
+        .day h3 {
+            color: #007bff;
         }
         .error {
             color: red;
             text-align: center;
-            margin: 20px;
-        }
-        footer {
-            text-align: center;
-            padding: 1rem;
-            background-color: #1a73e8;
-            color: white;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-        }
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 1.5rem;
-            }
-            th, td {
-                padding: 10px;
-                font-size: 0.9rem;
-            }
-            .rank, .weeks, .peak, .lyrics {
-                width: 20%;
-            }
-            .song-title, .artist {
-                width: 25%;
-            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1 id="chart-title">Top 50 US Songs - Weekly Chart</h1>
-    </header>
-    <div class="container">
-        <table id="chart-table">
-            <thead>
-                <tr>
-                    <th class="rank">Rank</th>
-                    <th class="song-title">Song Title</th>
-                    <th class="artist">Artist</th>
-                    <th class="weeks">Weeks on Chart</th>
-                    <th class="peak">Peak Position</th>
-                    <th class="lyrics">Lyrics</th>
-                </tr>
-            </thead>
-            <tbody id="chart-body">
-                <!-- Data will be populated by JavaScript -->
-            </tbody>
-        </table>
-        <p id="error-message" class="error" style="display: none;"></p>
-        <p><em>Data sourced from Billboard Hot 100. For the full list, visit <a href="https://www.billboard.com/charts/hot-100/">Billboard Hot 100</a>. Lyrics links provided by Genius.</em></p>
+    <h1>Weekly Healthy Meal Planner</h1>
+    <div class="input-container">
+        <input type="number" id="budget" placeholder="Enter your budget ($)" min="0" step="0.01">
+        <label><input type="checkbox" id="noCook"> No-Cook Meals Only</label>
+        <button onclick="generateMealPlan()">Plan My Meals</button>
     </div>
-    <footer>
-        <p>Chart updated weekly based on streaming, airplay, and sales data. © 2025</p>
-    </footer>
+    <div id="mealPlan"></div>
 
     <script>
-        // Function to format string for Genius URL
-        function formatForGenius(str) {
-            return str
-                .toLowerCase()
-                .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-                .replace(/\s+/g, '-')          // Replace spaces with hyphens
-                .replace(/-+/g, '-');          // Remove duplicate hyphens
-        }
+        // Food items with approximate prices per serving (in USD)
+        const foodItems = [
+            // All foods (including those requiring cooking)
+            { name: "Oatmeal", price: 0.30, type: "breakfast", requiresCooking: true },
+            { name: "Banana", price: 0.20, type: "breakfast", requiresCooking: false },
+            { name: "Greek Yogurt", price: 0.80, type: "breakfast", requiresCooking: false },
+            { name: "Brown Rice", price: 0.25, type: "lunch/dinner", requiresCooking: true },
+            { name: "Black Beans (canned)", price: 0.40, type: "lunch/dinner", requiresCooking: false },
+            { name: "Chicken Breast", price: 1.00, type: "lunch/dinner", requiresCooking: true },
+            { name: "Broccoli", price: 0.50, type: "lunch/dinner", requiresCooking: true },
+            { name: "Carrots (baby carrots)", price: 0.30, type: "lunch/dinner", requiresCooking: false },
+            { name: "Apple", price: 0.25, type: "snack", requiresCooking: false },
+            { name: "Almonds (small serving)", price: 0.50, type: "snack", requiresCooking: false },
+            // Additional no-cook items
+            { name: "Hummus (with veggies)", price: 0.60, type: "lunch/dinner", requiresCooking: false },
+            { name: "Pre-cooked Tuna (canned)", price: 0.70, type: "lunch/dinner", requiresCooking: false },
+            { name: "Whole Wheat Bread", price: 0.20, type: "lunch/dinner", requiresCooking: false },
+            { name: "Peanut Butter", price: 0.30, type: "breakfast", requiresCooking: false }
+        ];
 
-        // Function to generate Genius lyrics URL
-        function getLyricsUrl(song, artist) {
-            const formattedSong = formatForGenius(song);
-            const formattedArtist = formatForGenius(artist.split(' & ')[0]); // Use primary artist
-            return `https://genius.com/${formattedArtist}-${formattedSong}-lyrics`;
-        }
+        function generateMealPlan() {
+            const budgetInput = document.getElementById("budget").value;
+            const noCook = document.getElementById("noCook").checked;
+            const weeklyBudget = parseFloat(budgetInput);
+            const mealPlanDiv = document.getElementById("mealPlan");
+            mealPlanDiv.innerHTML = "";
 
-        // Function to get the closest Saturday's date
-        function getClosestSaturday() {
-            const today = new Date();
-            const dayOfWeek = today.getDay();
-            const diff = dayOfWeek >= 6 ? 6 - dayOfWeek : -dayOfWeek;
-            const saturday = new Date(today.setDate(today.getDate() + diff));
-            return saturday.toISOString().split('T')[0];
-        }
-
-        async function fetchValidDates() {
-            const url = 'https://raw.githubusercontent.com/mhollingshead/billboard-hot-100/main/valid_dates.json';
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch valid dates');
-                }
-                const dates = await response.json();
-                return dates;
-            } catch (error) {
-                console.error('Error fetching valid dates:', error);
-                return [];
+            if (isNaN(weeklyBudget) || weeklyBudget <= 0) {
+                mealPlanDiv.innerHTML = '<p class="error">Please enter a valid budget amount.</p>';
+                return;
             }
-        }
 
-        async function fetchChartData() {
-            const tbody = document.getElementById('chart-body');
-            const errorMessage = document.getElementById('error-message');
-            const chartTitle = document.getElementById('chart-title');
-            let chartDate = getClosestSaturday();
-            let url = `https://raw.githubusercontent.com/mhollingshead/billboard-hot-100/main/date/${chartDate}.json`;
+            const dailyBudget = weeklyBudget / 7;
+            const mealsPerDay = 3; // Breakfast, Lunch, Dinner
+            const budgetPerMeal = dailyBudget / mealsPerDay;
 
-            try {
-                let response = await fetch(url);
-                if (!response.ok) {
-                    // If the date is invalid, fetch valid dates and try the most recent one
-                    const validDates = await fetchValidDates();
-                    if (validDates.length === 0) {
-                        throw new Error('No valid dates available');
-                    }
-                    chartDate = validDates[validDates.length - 1]; // Use the most recent valid date
-                    url = `https://raw.githubusercontent.com/mhollingshead/billboard-hot-100/main/date/${chartDate}.json`;
-                    response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                }
-                const chart = await response.json();
-
-                // Update chart title with the date
-                chartTitle.textContent = `Top 50 US Songs - Weekly Chart (${chartDate})`;
-
-                // Clear existing table content
-                tbody.innerHTML = '';
-
-                // Ensure data exists and is an array
-                if (!chart.data || !Array.isArray(chart.data)) {
-                    throw new Error('Invalid chart data format');
-                }
-
-                // Populate table with top 50 songs
-                chart.data.slice(0, 50).forEach((song, index) => {
-                    const lyricsUrl = getLyricsUrl(song.song, song.artist);
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td class="rank">${song.this_week}</td>
-                        <td class="song-title">${song.song}</td>
-                        <td class="artist">${song.artist}</td>
-                        <td class="weeks">${song.weeks_on_chart}</td>
-                        <td class="peak">${song.peak_position}</td>
-                        <td class="lyrics"><a href="${lyricsUrl}" target="_blank">View Lyrics</a></td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            } catch (error) {
-                console.error('Error fetching chart data:', error);
-                errorMessage.textContent = 'Failed to load chart data. Please try again later.';
-                errorMessage.style.display = 'block';
+            if (budgetPerMeal < 0.50) {
+                mealPlanDiv.innerHTML = '<p class="error">Budget is too low to plan healthy meals. Please increase your budget.</p>';
+                return;
             }
+
+            const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+            let output = "";
+
+            days.forEach(day => {
+                let dailyCost = 0;
+                let dailyMeals = `<div class="day"><h3>${day}</h3>`;
+
+                // Breakfast
+                let breakfast = selectMeal("breakfast", budgetPerMeal, noCook);
+                dailyCost += breakfast.cost;
+                dailyMeals += `<p><strong>Breakfast:</strong> ${breakfast.items.join(", ")} ($${breakfast.cost.toFixed(2)})</p>`;
+
+                // Lunch
+                let lunch = selectMeal("lunch/dinner", budgetPerMeal, noCook);
+                dailyCost += lunch.cost;
+                dailyMeals += `<p><strong>Lunch:</strong> ${lunch.items.join(", ")} ($${lunch.cost.toFixed(2)})</p>`;
+
+                // Dinner
+                let dinner = selectMeal("lunch/dinner", budgetPerMeal, noCook);
+                dailyCost += dinner.cost;
+                dailyMeals += `<p><strong>Dinner:</strong> ${dinner.items.join(", ")} ($${dinner.cost.toFixed(2)})</p>`;
+
+                // Snack (if budget allows)
+                let snack = selectMeal("snack", budgetPerMeal / 2, noCook);
+                if (snack.items.length > 0 && (dailyCost + snack.cost) <= dailyBudget) {
+                    dailyCost += snack.cost;
+                    dailyMeals += `<p><strong>Snack:</strong> ${snack.items.join(", ")} ($${snack.cost.toFixed(2)})</p>`;
+                }
+
+                dailyMeals += `<p><strong>Total Daily Cost:</strong> $${dailyCost.toFixed(2)}</p></div>`;
+                output += dailyMeals;
+            });
+
+            mealPlanDiv.innerHTML = output;
         }
 
-        // Fetch data when the page loads
-        window.onload = fetchChartData;
+        function selectMeal(type, budget, noCook) {
+            let availableItems = foodItems.filter(item => item.type === type && (!noCook || !item.requiresCooking));
+            let selectedItems = [];
+            let totalCost = 0;
+
+            // Shuffle items to add variety
+            availableItems = availableItems.sort(() => Math.random() - 0.5);
+
+            for (let item of availableItems) {
+                if (totalCost + item.price <= budget) {
+                    selectedItems.push(item.name);
+                    totalCost += item.price;
+                }
+            }
+
+            return { items: selectedItems, cost: totalCost };
+        }
     </script>
 </body>
 </html>
