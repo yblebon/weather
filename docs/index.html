@@ -79,9 +79,25 @@
             margin-right: 5px;
             vertical-align: middle;
         }
-        /* Default group style for lines */
+        /* Group line styling */
         .group-line {
             height: 2px;
+            width: 100%;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        /* Vertical and smaller X-axis labels */
+        .vis-labelset .vis-label .vis-inner {
+            transform: rotate(-90deg);
+            transform-origin: left top;
+            font-size: 10px; /* Smaller font */
+            white-space: nowrap;
+            padding: 2px;
+            margin-left: 20px; /* Adjust for rotation */
+        }
+        .vis-time-axis .vis-text {
+            color: #333;
         }
     </style>
 </head>
@@ -128,8 +144,8 @@
             if (!groupColors[group]) {
                 // Generate a color using HSL with varied hue
                 const hue = Object.keys(groupColors).length * 137.508 % 360; // Golden angle for distinct hues
-                const saturation = 70; // Vibrant but not overly intense
-                const lightness = 50; // Balanced brightness
+                const saturation = 70; // Vibrant
+                const lightness = 75; // Bright for events
                 groupColors[group] = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
             }
             return groupColors[group];
@@ -219,13 +235,13 @@
                     if (!eventsByGroup[groupInput]) {
                         eventsByGroup[groupInput] = [];
                     }
-                    eventsByGroup[groupInput].push({ start: date, event: eventInput });
+                    eventsByGroup[groupInput].push({ start: date, event: eventInput, source: sourceInput });
                 }
             });
 
             if (hasError) return;
 
-            // Second pass: create background lines for groups
+            // Second pass: create lines connecting consecutive events in each group
             const groupLines = [];
             Object.keys(eventsByGroup).forEach(group => {
                 const groupEvents = eventsByGroup[group];
@@ -234,21 +250,24 @@
                 // Sort events by start date
                 groupEvents.sort((a, b) => a.start - b.start);
 
-                // Find the earliest and latest dates
-                const minDate = groupEvents[0].start;
-                const maxDate = groupEvents[groupEvents.length - 1].start;
+                // Create line segments between consecutive events
+                for (let i = 0; i < groupEvents.length - 1; i++) {
+                    const startEvent = groupEvents[i];
+                    const endEvent = groupEvents[i + 1];
+                    const groupClass = `group-${group.replace(/\s+/g, '-')}`;
 
-                // Create a single background line spanning the entire group
-                const groupClass = `group-${group.replace(/\s+/g, '-')}`;
-                groupLines.push({
-                    id: `line-${itemId++}`,
-                    content: '',
-                    start: minDate,
-                    end: maxDate,
-                    type: 'background',
-                    className: `group-line ${groupClass}`,
-                    style: `background: ${getColorForGroup(group)}; height: 2px;`
-                });
+                    // Create a thin line segment as a styled item
+                    groupLines.push({
+                        id: `line-${itemId++}`,
+                        content: '',
+                        start: startEvent.start,
+                        end: endEvent.start,
+                        type: 'range', // Use range to span between events
+                        group: startEvent.source, // Place in the source of the start event
+                        className: `group-line ${groupClass}`,
+                        style: `background: ${getColorForGroup(group)}; height: 2px; border: none; z-index: 0;`
+                    });
+                }
             });
 
             // Combine events and lines
@@ -283,12 +302,13 @@
             const options = {
                 height: '400px',
                 margin: {
-                    item: 20
+                    item: 10,
+                    axis: 30 // Increased to accommodate vertical labels
                 },
                 format: {
                     minorLabels: {
-                        hour: 'h A',
-                        day: 'MMM D, YYYY',
+                        hour: 'H:mm', // Concise format
+                        day: 'MMM D',
                         month: 'MMM YYYY',
                         year: 'YYYY'
                     },
@@ -296,19 +316,20 @@
                         hour: 'MMM D, YYYY',
                         day: 'MMM YYYY',
                         month: 'YYYY',
-                        year: 'YYYY'
+                        year: ''
                     }
                 },
-                stack: false, // Prevent overlapping items
-                timeAxis: { scale: 'hour', step: 1 } // Hour precision
+                timeAxis: { scale: 'hour', step: 6 }, // 6-hour steps to reduce overlap
+                align: 'left', // Align labels to ticks
+                stack: false // Prevent overlapping
             };
 
-            // Destroy existing timeline if it exists
+            // Destroy existing timeline
             if (timeline) {
                 timeline.destroy();
             }
 
-            // Initialize new timeline with groups
+            // Initialize new timeline
             timeline = new vis.Timeline(container, itemData, groups, options);
         }
     </script>
