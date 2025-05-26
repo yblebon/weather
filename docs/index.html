@@ -36,7 +36,7 @@
         th {
             background-color: #f2f2f2;
         }
-        input[type="date"], input[type="time"], input[type="text"] {
+        input[type="date"], input[type="time"], input[type="text"], input[type="url"] {
             width: 100%;
             padding: 5px;
             box-sizing: border-box;
@@ -69,13 +69,13 @@
         }
         .legend-item {
             display: inline-block;
-            margin-right: 20px;
+            margin-right: 15px;
             font-size: 0.9em;
         }
         .legend-color {
-            display: inline-block;
             width: 15px;
             height: 15px;
+            display: inline-block;
             margin-right: 5px;
             vertical-align: middle;
         }
@@ -91,247 +91,312 @@
         .vis-labelset .vis-label .vis-inner {
             transform: rotate(-90deg);
             transform-origin: left top;
-            font-size: 10px; /* Smaller font */
+            font-size: 10px;
             white-space: nowrap;
             padding: 2px;
-            margin-left: 20px; /* Adjust for rotation */
+            margin-left: 20px;
         }
         .vis-time-axis .vis-text {
             color: #333;
         }
+        /* JSON input styling */
+        #jsonInput {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
+<div class="container">
     <h1>Multi-Line Events Timeline Chart</h1>
-    <div class="container">
-        <div>
-            <table id="eventTable">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Event</th>
-                        <th>Source</th>
-                        <th>Group (Optional)</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><input type="date" class="date-input"></td>
-                        <td><input type="time" class="time-input"></td>
-                        <td><input type="text" class="event-input" placeholder="Enter event description"></td>
-                        <td><input type="text" class="source-input" placeholder="Enter source/category"></td>
-                        <td><input type="text" class="group-input" placeholder="Enter group (optional)"></td>
-                        <td><button onclick="removeRow(this)">Remove</button></td>
-                    </tr>
-                </tbody>
-            </table>
-            <button onclick="addRow()">Add New Event</button>
-            <button onclick="generateChart()">Generate Timeline</button>
-            <p id="errorMessage" class="error"></p>
-            <div id="legend"></div>
+    <div>
+        <!-- JSON file input with default URL -->
+        <div id="jsonInput">
+            <input type="url" id="jsonUrl" placeholder="Enter GitHub raw JSON URL" value="https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/events.json">
+            <button onclick="loadJsonData()">Add Events from JSON</button>
         </div>
-        <div id="timelineChart"></div>
+        <table id="eventTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Event</th>
+                    <th>Source</th>
+                    <th>Group (Optional)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="date" class="date-input"></td>
+                    <td><input type="time" class="time-input"></td>
+                    <td><input type="text" class="event-input" placeholder="Enter event description"></td>
+                    <td><input type="text" class="source-input" placeholder="Enter source/category"></td>
+                    <td><input type="text" class="group-input" placeholder="Enter group (optional)"></td>
+                    <td><button onclick="removeRow(this)">Remove</button></td>
+                </tr>
+            </tbody>
+        </table>
+        <button onclick="addRow()">Add New Event</button>
+        <button onclick="generateChart()">Generate Timeline</button>
+        <p id="errorMessage" class="error"></p>
+        <div id="legend"></div>
     </div>
+    <div id="timelineChart"></div>
+</div>
 
-    <script>
-        let timeline = null;
+<script>
+    let timeline = null;
 
-        // Dynamic color generation
-        const groupColors = {};
-        function getColorForGroup(group) {
-            if (!groupColors[group]) {
-                // Generate a color using HSL with varied hue
-                const hue = Object.keys(groupColors).length * 137.508 % 360; // Golden angle for distinct hues
-                const saturation = 70; // Vibrant
-                const lightness = 75; // Bright for events
-                groupColors[group] = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-            }
-            return groupColors[group];
+    // Dynamic color generation
+    const groupColors = {};
+    function getColorForGroup(group) {
+        if (!groupColors[group]) {
+            const hue = Object.keys(groupColors).length * 137.508 % 360; // Golden angle for distinct hues
+            const saturation = 70;
+            const lightness = 75;
+            groupColors[group] = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        }
+        return groupColors[group];
+    }
+
+    // Add a new row to the table
+    function addRow() {
+        const tbody = document.querySelector('#eventTable tbody');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><input type="date" class="date-input"></td>
+            <td><input type="time" class="time-input"></td>
+            <td><input type="text" class="event-input" placeholder="Enter event description"></td>
+            <td><input type="text" class="source-input" placeholder="Enter source/category"></td>
+            <td><input type="text" class="group-input" placeholder="Enter group (optional)"></td>
+            <td><button onclick="removeRow(this)">Remove</button></td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    // Remove a row from the table
+    function removeRow(button) {
+        if (document.querySelector('#eventTable tbody').children.length > 1) {
+            button.parentElement.parentElement.remove();
+        } else {
+            alert("At least one row must remain.");
+        }
+    }
+
+    // Load JSON data from GitHub
+    async function loadJsonData() {
+        const jsonUrl = document.getElementById('jsonUrl').value.trim();
+        const errorMessage = document.getElementById('errorMessage');
+        errorMessage.textContent = '';
+
+        if (!jsonUrl) {
+            errorMessage.textContent = 'Please enter a valid JSON URL.';
+            return;
         }
 
-        // Add a new row to the table
-        function addRow() {
+        try {
+            const response = await fetch(jsonUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const data = await response.json();
+
+            // Validate JSON structure
+            if (!Array.isArray(data)) {
+                throw new Error('JSON must be an array of events.');
+            }
+
             const tbody = document.querySelector('#eventTable tbody');
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><input type="date" class="date-input"></td>
-                <td><input type="time" class="time-input"></td>
-                <td><input type="text" class="event-input" placeholder="Enter event description"></td>
-                <td><input type="text" class="source-input" placeholder="Enter source/category"></td>
-                <td><input type="text" class="group-input" placeholder="Enter group (optional)"></td>
-                <td><button onclick="removeRow(this)">Remove</button></td>
-            `;
-            tbody.appendChild(row);
-        }
+            tbody.innerHTML = ''; // Clear existing rows
 
-        // Remove a row from the table
-        function removeRow(button) {
-            if (document.querySelector('#eventTable tbody').children.length > 1) {
-                button.parentElement.parentElement.remove();
-            } else {
-                alert("At least one row must remain.");
-            }
-        }
-
-        // Generate the timeline chart using Vis.js
-        function generateChart() {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = '';
-
-            // Collect data from the table
-            const rows = document.querySelectorAll('#eventTable tbody tr');
-            const items = [];
-            const groupsSet = new Set();
-            const eventsByGroup = {};
-            let itemId = 1;
-            let hasError = false;
-
-            // First pass: collect events and validate
-            rows.forEach((row, index) => {
-                const dateInput = row.querySelector('.date-input').value;
-                const timeInput = row.querySelector('.time-input').value;
-                const eventInput = row.querySelector('.event-input').value.trim();
-                const sourceInput = row.querySelector('.source-input').value.trim();
-                const groupInput = row.querySelector('.group-input').value.trim();
-
-                if (!dateInput || !eventInput || !sourceInput) {
-                    errorMessage.textContent = 'Please fill in all date, event, and source fields.';
-                    hasError = true;
-                    return;
+            for (const event of data) {
+                // Validate event fields
+                if (!event.date || !event.event || !event.source) {
+                    throw new Error('Each event must have date, event, and source fields.');
+                }
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(event.date)) {
+                    throw new Error(`Invalid date format in event: ${event.event}. Use YYYY-MM-DD.`);
+                }
+                if (event.time && !/^\d{2}:\d{2}$/.test(event.time)) {
+                    throw new Error(`Invalid time format in event: ${event.event}. Use HH:mm or leave empty.`);
                 }
 
-                // Combine date and time
-                let dateStr = dateInput;
-                if (timeInput) {
-                    dateStr += `T${timeInput}`;
-                } else {
-                    dateStr += 'T00:00'; // Default to midnight if no time provided
-                }
-                const date = new Date(dateStr);
-                if (isNaN(date.getTime())) {
-                    errorMessage.textContent = `Invalid date or time in row ${index + 1}.`;
-                    hasError = true;
-                    return;
-                }
-
-                // Store event
-                const groupClass = groupInput ? `group-${groupInput.replace(/\s+/g, '-')}` : 'group-default';
-                const item = {
-                    id: itemId++,
-                    content: eventInput,
-                    start: date,
-                    group: sourceInput,
-                    className: groupClass,
-                    style: groupInput ? `background-color: ${getColorForGroup(groupInput)};` : undefined
-                };
-                items.push(item);
-
-                groupsSet.add(sourceInput);
-
-                // Organize events by group for line tracing (ignoring source)
-                if (groupInput) {
-                    if (!eventsByGroup[groupInput]) {
-                        eventsByGroup[groupInput] = [];
-                    }
-                    eventsByGroup[groupInput].push({ start: date, event: eventInput, source: sourceInput });
-                }
-            });
-
-            if (hasError) return;
-
-            // Second pass: create lines connecting consecutive events in each group
-            const groupLines = [];
-            Object.keys(eventsByGroup).forEach(group => {
-                const groupEvents = eventsByGroup[group];
-                if (groupEvents.length < 2) return; // Skip groups with only one event
-
-                // Sort events by start date
-                groupEvents.sort((a, b) => a.start - b.start);
-
-                // Create line segments between consecutive events
-                for (let i = 0; i < groupEvents.length - 1; i++) {
-                    const startEvent = groupEvents[i];
-                    const endEvent = groupEvents[i + 1];
-                    const groupClass = `group-${group.replace(/\s+/g, '-')}`;
-
-                    // Create a thin line segment as a styled item
-                    groupLines.push({
-                        id: `line-${itemId++}`,
-                        content: '',
-                        start: startEvent.start,
-                        end: endEvent.start,
-                        type: 'range', // Use range to span between events
-                        group: startEvent.source, // Place in the source of the start event
-                        className: `group-line ${groupClass}`,
-                        style: `background: ${getColorForGroup(group)}; height: 2px; border: none; z-index: 0;`
-                    });
-                }
-            });
-
-            // Combine events and lines
-            const allItems = [...items, ...groupLines];
-
-            // Create groups for Y-axis
-            const groups = new vis.DataSet();
-            Array.from(groupsSet).sort().forEach((source, index) => {
-                groups.add({
-                    id: source,
-                    content: source
-                });
-            });
-
-            // Generate legend
-            const legendDiv = document.getElementById('legend');
-            legendDiv.innerHTML = '';
-            Object.keys(eventsByGroup).forEach(group => {
-                const color = getColorForGroup(group);
-                const legendItem = document.createElement('div');
-                legendItem.className = 'legend-item';
-                legendItem.innerHTML = `
-                    <span class="legend-color" style="background-color: ${color};"></span>
-                    ${group}
+                // Add row to table
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="date" class="date-input" value="${event.date}"></td>
+                    <td><input type="time" class="time-input" value="${event.time || ''}"></td>
+                    <td><input type="text" class="event-input" value="${event.event}"></td>
+                    <td><input type="text" class="source-input" value="${event.source}"></td>
+                    <td><input type="text" class="group-input" value="${event.group || ''}"></td>
+                    <td><button onclick="removeRow(this)">Remove</button></td>
                 `;
-                legendDiv.appendChild(legendItem);
-            });
-
-            // Create Vis.js timeline
-            const container = document.getElementById('timelineChart');
-            const itemData = new vis.DataSet(allItems);
-            const options = {
-                height: '400px',
-                margin: {
-                    item: 10,
-                    axis: 30 // Increased to accommodate vertical labels
-                },
-                format: {
-                    minorLabels: {
-                        hour: 'H:mm', // Concise format
-                        day: 'MMM D',
-                        month: 'MMM YYYY',
-                        year: 'YYYY'
-                    },
-                    majorLabels: {
-                        hour: 'MMM D, YYYY',
-                        day: 'MMM YYYY',
-                        month: 'YYYY',
-                        year: ''
-                    }
-                },
-                timeAxis: { scale: 'hour', step: 6 }, // 6-hour steps to reduce overlap
-                align: 'left', // Align labels to ticks
-                stack: false // Prevent overlapping
-            };
-
-            // Destroy existing timeline
-            if (timeline) {
-                timeline.destroy();
+                tbody.appendChild(row);
             }
 
-            // Initialize new timeline
-            timeline = new vis.Timeline(container, itemData, groups, options);
+            // Generate timeline
+            generateChart();
+        } catch (error) {
+            errorMessage.textContent = `Error loading JSON: ${error.message}`;
         }
-    </script>
+    }
+
+    // Generate the timeline chart using Vis.js
+    function generateChart() {
+        const errorMessage = document.getElementById('errorMessage');
+        errorMessage.textContent = '';
+
+        // Collect data from the table
+        const rows = document.querySelectorAll('#eventTable tbody tr');
+        const items = [];
+        const groupsSet = new Set();
+        const eventsByGroup = {};
+        let itemId = 1;
+        let hasError = false;
+
+        // First pass: collect events and validate
+        rows.forEach((row, index) => {
+            const dateInput = row.querySelector('.date-input').value;
+            const timeInput = row.querySelector('.time-input').value;
+            const eventInput = row.querySelector('.event-input').value.trim();
+            const sourceInput = row.querySelector('.source-input').value.trim();
+            const groupInput = row.querySelector('.group-input').value.trim();
+
+            if (!dateInput || !eventInput || !sourceInput) {
+                errorMessage.textContent = 'Please fill in all date, event, and source fields.';
+                hasError = true;
+                return;
+            }
+
+            // Combine date and time
+            let dateStr = dateInput;
+            if (timeInput) {
+                dateStr += `T${timeInput}`;
+            } else {
+                dateStr += 'T00:00';
+            }
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) {
+                errorMessage.textContent = `Invalid date or time in row ${index + 1}.`;
+                hasError = true;
+                return;
+            }
+
+            // Store event
+            const groupClass = groupInput ? `group-${groupInput.replace(/\s+/g, '-')}` : 'group-default';
+            const item = {
+                id: itemId++,
+                content: eventInput,
+                start: date,
+                group: sourceInput,
+                className: groupClass,
+                style: groupInput ? `background-color: ${getColorForGroup(groupInput)};` : undefined
+            };
+            items.push(item);
+
+            groupsSet.add(sourceInput);
+
+            // Organize events by group for line tracing
+            if (groupInput) {
+                if (!eventsByGroup[groupInput]) {
+                    eventsByGroup[groupInput] = [];
+                }
+                eventsByGroup[groupInput].push({ start: date, event: eventInput, source: sourceInput });
+            }
+        });
+
+        if (hasError) return;
+
+        // Second pass: create lines connecting consecutive events in each group
+        const groupLines = [];
+        Object.keys(eventsByGroup).forEach(group => {
+            const groupEvents = eventsByGroup[group];
+            if (groupEvents.length < 2) return;
+
+            // Sort events by start date
+            groupEvents.sort((a, b) => a.start - b.start);
+
+            // Create line segments between consecutive events
+            for (let i = 0; i < groupEvents.length - 1; i++) {
+                const startEvent = groupEvents[i];
+                const endEvent = groupEvents[i + 1];
+                const groupClass = `group-${group.replace(/\s+/g, '-')}`;
+
+                groupLines.push({
+                    id: `line-${itemId++}`,
+                    content: '',
+                    start: startEvent.start,
+                    end: endEvent.start,
+                    type: 'range',
+                    group: startEvent.source,
+                    className: `group-line ${groupClass}`,
+                    style: `background: ${getColorForGroup(group)}; height: 2px; border: none; z-index: 0;`
+                });
+            }
+        });
+
+        // Combine events and lines
+        const allItems = [...items, ...groupLines];
+
+        // Create groups for Y-axis
+        const groups = new vis.DataSet();
+        Array.from(groupsSet).sort().forEach((source, index) => {
+            groups.add({
+                id: source,
+                content: source
+            });
+        });
+
+        // Generate legend
+        const legendDiv = document.getElementById('legend');
+        legendDiv.innerHTML = '';
+        Object.keys(eventsByGroup).forEach(group => {
+            const color = getColorForGroup(group);
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            legendItem.innerHTML = `
+                <span class="legend-color" style="background-color: ${color};"></span>
+                ${group}
+            `;
+            legendDiv.appendChild(legendItem);
+        });
+
+        // Create Vis.js timeline
+        const container = document.getElementById('timelineChart');
+        const itemData = new vis.DataSet(allItems);
+        const options = {
+            height: '400px',
+            margin: {
+                item: 10,
+                axis: 30
+            },
+            format: {
+                minorLabels: {
+                    hour: 'H:mm',
+                    day: 'MMM D',
+                    month: 'MMM YYYY',
+                    year: 'YYYY'
+                },
+                majorLabels: {
+                    hour: 'MMM D, YYYY',
+                    day: 'MMM YYYY',
+                    month: 'YYYY',
+                    year: ''
+                }
+            },
+            timeAxis: { scale: 'hour', step: 6 },
+            align: 'left',
+            stack: false
+        };
+
+        // Destroy existing timeline
+        if (timeline) {
+            timeline.destroy();
+        }
+
+        // Initialize new timeline
+        timeline = new vis.Timeline(container, itemData, groups, options);
+    }
+</script>
 </body>
 </html>
