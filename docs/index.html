@@ -3,400 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Line Events Timeline Chart with Vis.js</title>
-    <!-- Vis.js CSS and JS CDN -->
-    <link href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
+    <title>Enhanced Conversation Timeline with X Post Embeds</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        h1 {
-            text-align: center;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
         }
         .container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        table {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            max-width: 1200px;
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        input[type="date"], input[type="time"], input[type="text"], input[type="url"] {
-            width: 100%;
-            padding: 5px;
-            box-sizing: border-box;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
+        .card {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            overflow: hidden;
             cursor: pointer;
-            margin: 5px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            padding: 10px;
         }
-        button:hover {
-            background-color: #45a049;
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
-        #timelineChart {
-            height: 400px;
+        .card-header {
+            padding: 20px;
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            transition: background 0.3s ease;
+        }
+        /* Color palette for card headers */
+        .card-header.color-0 { background: linear-gradient(135deg, #007bff, #005bb5); }
+        .card-header.color-1 { background: linear-gradient(135deg, #28a745, #1e7e34); }
+        .card-header.color-2 { background: linear-gradient(135deg, #6f42c1, #5a32a3); }
+        .card-header.color-3 { background: linear-gradient(135deg, #fd7e14, #d95f02); }
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+            display: none;
+        }
+        .timeline.active {
+            display: block;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            background-color: #ddd;
+            transform: translateX(-50%);
+        }
+        .message {
+            display: flex;
+            margin: 20px 0;
+            position: relative;
+            align-items: flex-start;
+        }
+        .message.left {
+            justify-content: flex-start;
+        }
+        .message.right {
+            justify-content: flex-end;
+        }
+        .message-content {
+            max-width: 60%;
+            padding: 12px 16px;
+            border-radius: 15px;
+            position: relative;
+            background-color: #fff;
+            transition: background 0.2s ease;
+        }
+        .message.left .message-content {
+            margin-left: 50px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        .message.right .message-content {
+            background-color: #007bff;
+            color: white;
+            margin-right: 50px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        .username {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #666;
+            margin: 5px 0 0 10px;
+            position: absolute;
+            bottom: -20px;
+        }
+        .message.left .timestamp {
+            left: 50px;
+        }
+        .message.right .timestamp {
+            right: 50px;
+        }
+        .message::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background-color: #ddd;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            z-index: 1;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 0 10px;
+            object-fit: cover;
+            border: 2px solid #ddd;
+        }
+        .message.left .avatar {
+            order: -1;
+        }
+        .message.right .avatar {
+            order: 1;
+        }
+        .attachment {
+            margin-top: 10px;
+            max-width: 100%;
+        }
+        .attachment img {
+            max-width: 200px;
+            border-radius: 8px;
+            display: block;
+        }
+        .attachment audio {
+            width: 200px;
+        }
+        .attachment video {
+            max-width: 200px;
+            border-radius: 8px;
+        }
+        .attachment.x-post {
             border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            max-width: 500px;
+        }
+        .attachment.x-post a {
+            color: #1DA1F2;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .attachment.x-post a:hover {
+            text-decoration: underline;
         }
         .error {
             color: red;
-            font-size: 0.9em;
+            text-align: center;
+            margin: 20px;
+            font-size: 16px;
         }
-        /* Legend styling */
-        #legend {
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            background-color: #f9f9f9;
-        }
-        .legend-item {
-            display: inline-block;
-            margin-right: 15px;
-            font-size: 0.9em;
-        }
-        .legend-color {
-            width: 15px;
-            height: 15px;
-            display: inline-block;
-            margin-right: 5px;
-            vertical-align: middle;
-        }
-        /* Group line styling */
-        .group-line {
-            height: 2px;
-            width: 100%;
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        /* Vertical and smaller X-axis labels */
-        .vis-labelset .vis-label .vis-inner {
-            transform: rotate(-90deg);
-            transform-origin: left top;
-            font-size: 10px;
-            white-space: nowrap;
-            padding: 2px;
-            margin-left: 20px;
-        }
-        .vis-time-axis .vis-text {
-            color: #333;
-        }
-        /* JSON input styling */
-        #jsonInput {
-            margin-bottom: 10px;
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .attachment.x-post {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>Multi-Line Events Timeline Chart</h1>
-    <div>
-        <!-- JSON file input with default URL -->
-        <div id="jsonInput">
-            <input type="url" id="jsonUrl" placeholder="Enter GitHub raw JSON URL" value="https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/events.json">
-            <button onclick="loadJsonData()">Add Events from JSON</button>
-        </div>
-        <table id="eventTable">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Event</th>
-                    <th>Source</th>
-                    <th>Group (Optional)</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><input type="date" class="date-input"></td>
-                    <td><input type="time" class="time-input"></td>
-                    <td><input type="text" class="event-input" placeholder="Enter event description"></td>
-                    <td><input type="text" class="source-input" placeholder="Enter source/category"></td>
-                    <td><input type="text" class="group-input" placeholder="Enter group (optional)"></td>
-                    <td><button onclick="removeRow(this)">Remove</button></td>
-                </tr>
-            </tbody>
-        </table>
-        <button onclick="addRow()">Add New Event</button>
-        <button onclick="generateChart()">Generate Timeline</button>
-        <p id="errorMessage" class="error"></p>
-        <div id="legend"></div>
-    </div>
-    <div id="timelineChart"></div>
-</div>
+    <div class="container" id="container"></div>
+    <div class="error" id="error" style="display: none;"></div>
 
-<script>
-    let timeline = null;
+    <!-- X Widget Script for Embedded Posts -->
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-    // Dynamic color generation
-    const groupColors = {};
-    function getColorForGroup(group) {
-        if (!groupColors[group]) {
-            const hue = Object.keys(groupColors).length * 137.508 % 360; // Golden angle for distinct hues
-            const saturation = 70;
-            const lightness = 75;
-            groupColors[group] = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-        }
-        return groupColors[group];
-    }
+    <script>
+        // Color palette for card headers
+        const headerColors = [
+            'color-0', // Blue
+            'color-1', // Green
+            'color-2', // Purple
+            'color-3'  // Orange
+        ];
 
-    // Add a new row to the table
-    function addRow() {
-        const tbody = document.querySelector('#eventTable tbody');
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><input type="date" class="date-input"></td>
-            <td><input type="time" class="time-input"></td>
-            <td><input type="text" class="event-input" placeholder="Enter event description"></td>
-            <td><input type="text" class="source-input" placeholder="Enter source/category"></td>
-            <td><input type="text" class="group-input" placeholder="Enter group (optional)"></td>
-            <td><button onclick="removeRow(this)">Remove</button></td>
-        `;
-        tbody.appendChild(row);
-    }
-
-    // Remove a row from the table
-    function removeRow(button) {
-        if (document.querySelector('#eventTable tbody').children.length > 1) {
-            button.parentElement.parentElement.remove();
-        } else {
-            alert("At least one row must remain.");
-        }
-    }
-
-    // Load JSON data from GitHub
-    async function loadJsonData() {
-        const jsonUrl = document.getElementById('jsonUrl').value.trim();
-        const errorMessage = document.getElementById('errorMessage');
-        errorMessage.textContent = '';
-
-        if (!jsonUrl) {
-            errorMessage.textContent = 'Please enter a valid JSON URL.';
-            return;
-        }
-
-        try {
-            const response = await fetch(jsonUrl);
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const data = await response.json();
-
-            // Validate JSON structure
-            if (!Array.isArray(data)) {
-                throw new Error('JSON must be an array of events.');
-            }
-
-            const tbody = document.querySelector('#eventTable tbody');
-            tbody.innerHTML = ''; // Clear existing rows
-
-            for (const event of data) {
-                // Validate event fields
-                if (!event.date || !event.event || !event.source) {
-                    throw new Error('Each event must have date, event, and source fields.');
+        // Function to create a card for a conversation
+        function createCard(conversation, index) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            const header = document.createElement('div');
+            header.className = `card-header ${headerColors[index % headerColors.length]}`;
+            header.textContent = conversation.name;
+            
+            const timeline = document.createElement('div');
+            timeline.className = 'timeline';
+            
+            conversation.messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${message.sender}`;
+                
+                const avatar = document.createElement('img');
+                avatar.className = 'avatar';
+                avatar.src = message.photoUrl;
+                avatar.alt = `${message.username}'s avatar`;
+                avatar.onerror = () => { avatar.src = 'https://via.placeholder.com/40?text=Default'; };
+                
+                const content = document.createElement('div');
+                content.className = 'message-content';
+                
+                // Build attachment HTML
+                let attachmentHtml = '';
+                if (message.attachment) {
+                    if (message.attachment.type === 'image') {
+                        attachmentHtml = `<div class="attachment"><img src="${message.attachment.url}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'"></div>`;
+                    } else if (message.attachment.type === 'audio') {
+                        attachmentHtml = `<div class="attachment"><audio controls><source src="${message.attachment.url}" type="audio/mpeg"></audio></div>`;
+                    } else if (message.attachment.type === 'video') {
+                        attachmentHtml = `<div class="attachment"><video controls><source src="${message.attachment.url}" type="video/mp4"></video></div>`;
+                    } else if (message.attachment.type === 'xPost') {
+                        attachmentHtml = message.attachment.embedCode 
+                            ? `<div class="attachment x-post">${message.attachment.embedCode}</div>`
+                            : `<div class="attachment x-post"><a href="#" onclick="return false;">Error: Invalid X post embed code</a></div>`;
+                    }
                 }
-                if (!/^\d{4}-\d{2}-\d{2}$/.test(event.date)) {
-                    throw new Error(`Invalid date format in event: ${event.event}. Use YYYY-MM-DD.`);
-                }
-                if (event.time && !/^\d{2}:\d{2}$/.test(event.time)) {
-                    throw new Error(`Invalid time format in event: ${event.event}. Use HH:mm or leave empty.`);
-                }
-
-                // Add row to table
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><input type="date" class="date-input" value="${event.date}"></td>
-                    <td><input type="time" class="time-input" value="${event.time || ''}"></td>
-                    <td><input type="text" class="event-input" value="${event.event}"></td>
-                    <td><input type="text" class="source-input" value="${event.source}"></td>
-                    <td><input type="text" class="group-input" value="${event.group || ''}"></td>
-                    <td><button onclick="removeRow(this)">Remove</button></td>
+                
+                content.innerHTML = `
+                    <div class="username">${message.username}</div>
+                    ${message.text}
+                    ${attachmentHtml}
+                    <div class="timestamp">${message.timestamp}</div>
                 `;
-                tbody.appendChild(row);
-            }
-
-            // Generate timeline
-            generateChart();
-        } catch (error) {
-            errorMessage.textContent = `Error loading JSON: ${error.message}`;
-        }
-    }
-
-    // Generate the timeline chart using Vis.js
-    function generateChart() {
-        const errorMessage = document.getElementById('errorMessage');
-        errorMessage.textContent = '';
-
-        // Collect data from the table
-        const rows = document.querySelectorAll('#eventTable tbody tr');
-        const items = [];
-        const groupsSet = new Set();
-        const eventsByGroup = {};
-        let itemId = 1;
-        let hasError = false;
-
-        // First pass: collect events and validate
-        rows.forEach((row, index) => {
-            const dateInput = row.querySelector('.date-input').value;
-            const timeInput = row.querySelector('.time-input').value;
-            const eventInput = row.querySelector('.event-input').value.trim();
-            const sourceInput = row.querySelector('.source-input').value.trim();
-            const groupInput = row.querySelector('.group-input').value.trim();
-
-            if (!dateInput || !eventInput || !sourceInput) {
-                errorMessage.textContent = 'Please fill in all date, event, and source fields.';
-                hasError = true;
-                return;
-            }
-
-            // Combine date and time
-            let dateStr = dateInput;
-            if (timeInput) {
-                dateStr += `T${timeInput}`;
-            } else {
-                dateStr += 'T00:00';
-            }
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) {
-                errorMessage.textContent = `Invalid date or time in row ${index + 1}.`;
-                hasError = true;
-                return;
-            }
-
-            // Store event
-            const groupClass = groupInput ? `group-${groupInput.replace(/\s+/g, '-')}` : 'group-default';
-            const item = {
-                id: itemId++,
-                content: eventInput,
-                start: date,
-                group: sourceInput,
-                className: groupClass,
-                style: groupInput ? `background-color: ${getColorForGroup(groupInput)};` : undefined
-            };
-            items.push(item);
-
-            groupsSet.add(sourceInput);
-
-            // Organize events by group for line tracing
-            if (groupInput) {
-                if (!eventsByGroup[groupInput]) {
-                    eventsByGroup[groupInput] = [];
-                }
-                eventsByGroup[groupInput].push({ start: date, event: eventInput, source: sourceInput });
-            }
-        });
-
-        if (hasError) return;
-
-        // Second pass: create lines connecting consecutive events in each group
-        const groupLines = [];
-        Object.keys(eventsByGroup).forEach(group => {
-            const groupEvents = eventsByGroup[group];
-            if (groupEvents.length < 2) return;
-
-            // Sort events by start date
-            groupEvents.sort((a, b) => a.start - b.start);
-
-            // Create line segments between consecutive events
-            for (let i = 0; i < groupEvents.length - 1; i++) {
-                const startEvent = groupEvents[i];
-                const endEvent = groupEvents[i + 1];
-                const groupClass = `group-${group.replace(/\s+/g, '-')}`;
-
-                groupLines.push({
-                    id: `line-${itemId++}`,
-                    content: '',
-                    start: startEvent.start,
-                    end: endEvent.start,
-                    type: 'range',
-                    group: startEvent.source,
-                    className: `group-line ${groupClass}`,
-                    style: `background: ${getColorForGroup(group)}; height: 2px; border: none; z-index: 0;`
-                });
-            }
-        });
-
-        // Combine events and lines
-        const allItems = [...items, ...groupLines];
-
-        // Create groups for Y-axis
-        const groups = new vis.DataSet();
-        Array.from(groupsSet).sort().forEach((source, index) => {
-            groups.add({
-                id: source,
-                content: source
+                
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(content);
+                timeline.appendChild(messageDiv);
             });
-        });
-
-        // Generate legend
-        const legendDiv = document.getElementById('legend');
-        legendDiv.innerHTML = '';
-        Object.keys(eventsByGroup).forEach(group => {
-            const color = getColorForGroup(group);
-            const legendItem = document.createElement('div');
-            legendItem.className = 'legend-item';
-            legendItem.innerHTML = `
-                <span class="legend-color" style="background-color: ${color};"></span>
-                ${group}
-            `;
-            legendDiv.appendChild(legendItem);
-        });
-
-        // Create Vis.js timeline
-        const container = document.getElementById('timelineChart');
-        const itemData = new vis.DataSet(allItems);
-        const options = {
-            height: '400px',
-            margin: {
-                item: 10,
-                axis: 30
-            },
-            format: {
-                minorLabels: {
-                    hour: 'H:mm',
-                    day: 'MMM D',
-                    month: 'MMM YYYY',
-                    year: 'YYYY'
-                },
-                majorLabels: {
-                    hour: 'MMM D, YYYY',
-                    day: 'MMM YYYY',
-                    month: 'YYYY',
-                    year: ''
+            
+            card.appendChild(header);
+            card.appendChild(timeline);
+            
+            // Toggle timeline visibility on card click
+            card.addEventListener('click', () => {
+                timeline.classList.toggle('active');
+                // Reinitialize X widgets after timeline is shown
+                if (timeline.classList.contains('active') && window.twttr) {
+                    window.twttr.widgets.load(timeline);
                 }
-            },
-            timeAxis: { scale: 'hour', step: 6 },
-            align: 'left',
-            stack: false
-        };
-
-        // Destroy existing timeline
-        if (timeline) {
-            timeline.destroy();
+            });
+            
+            return card;
         }
 
-        // Initialize new timeline
-        timeline = new vis.Timeline(container, itemData, groups, options);
-    }
-</script>
+        // Fetch JSON from GitHub
+        const jsonUrl = 'https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/conversations.json';
+        fetch(jsonUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch JSON file');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const container = document.getElementById('container');
+                data.forEach((conversation, index) => {
+                    const card = createCard(conversation, index);
+                    container.appendChild(card);
+                });
+            })
+            .catch(error => {
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = `Error: ${error.message}`;
+                errorDiv.style.display = 'block';
+            });
+    </script>
 </body>
 </html>
