@@ -3,53 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Conversation Timeline with YouTube Embeds</title>
+    <title>Cartoon Black-and-White Timeline with Colored Attachments</title>
     <style>
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #f0f2f5;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background-color: #f5f5f0;
             margin: 0;
             padding: 20px;
             display: flex;
             justify-content: center;
+            color: #000;
         }
         .container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 40px;
+            gap: 30px;
             max-width: 1200px;
             width: 100%;
         }
         .card {
             background-color: #fff;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            border: 3px solid #000;
+            border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            padding: 10px;
+            transition: transform 0.2s ease;
         }
         .card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transform: scale(1.02);
         }
         .card-header {
-            padding: 20px;
-            color: white;
-            font-size: 20px;
-            font-weight: 600;
+            padding: 15px;
+            color: #000;
+            font-size: 18px;
+            font-weight: bold;
             text-align: center;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-            transition: background 0.3s ease;
+            border-bottom: 2px solid #000;
         }
-        /* Color palette for card headers */
-        .card-header.color-0 { background: linear-gradient(135deg, #007bff, #005bb5); }
-        .card-header.color-1 { background: linear-gradient(135deg, #28a745, #1e7e34); }
-        .card-header.color-2 { background: linear-gradient(135deg, #6f42c1, #5a32a3); }
-        .card-header.color-3 { background: linear-gradient(135deg, #fd7e14, #d95f02); }
+        .card-header.color-0 { background: #e0e0e0; }
+        .card-header.color-1 { background: #c0c0c0; }
+        .card-header.color-2 { background: #a0a0a0; }
+        .card-header.color-3 { background: #808080; }
         .timeline {
             position: relative;
-            padding: 20px 0;
+            padding: 15px 0;
             display: none;
         }
         .timeline.active {
@@ -62,12 +59,12 @@
             bottom: 0;
             left: 50%;
             width: 4px;
-            background-color: #ddd;
+            background-color: #333;
             transform: translateX(-50%);
         }
         .message {
             display: flex;
-            margin: 20px 0;
+            margin: 15px 0;
             position: relative;
             align-items: flex-start;
         }
@@ -79,33 +76,30 @@
         }
         .message-content {
             max-width: 60%;
-            padding: 12px 16px;
-            border-radius: 15px;
-            position: relative;
+            padding: 10px 14px;
+            border: 2px solid #000;
+            border-radius: 12px;
             background-color: #fff;
-            transition: background 0.2s ease;
         }
         .message.left .message-content {
             margin-left: 50px;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            background-color: #f0f0f0;
         }
         .message.right .message-content {
-            background-color: #007bff;
-            color: white;
             margin-right: 50px;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            background-color: #d0d0d0;
         }
         .username {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             margin-bottom: 5px;
         }
         .timestamp {
-            font-size: 12px;
-            color: #666;
+            font-size: 11px;
+            color: #444;
             margin: 5px 0 0 10px;
             position: absolute;
-            bottom: -20px;
+            bottom: -18px;
         }
         .message.left .timestamp {
             left: 50px;
@@ -115,9 +109,9 @@
         }
         .message::before {
             content: '';
-            width: 12px;
-            height: 12px;
-            background-color: #ddd;
+            width: 10px;
+            height: 10px;
+            background-color: #000;
             border-radius: 50%;
             position: absolute;
             top: 50%;
@@ -131,7 +125,8 @@
             border-radius: 50%;
             margin: 0 10px;
             object-fit: cover;
-            border: 2px solid #ddd;
+            border: 2px solid #000;
+            filter: grayscale(1) contrast(1.2);
         }
         .message.left .avatar {
             order: -1;
@@ -140,8 +135,11 @@
             order: 1;
         }
         .attachment {
-            margin-top: 10px;
+            margin-top: 8px;
             max-width: 100%;
+            border: 2px solid #000;
+            border-radius: 8px;
+            overflow: hidden;
         }
         .attachment img {
             max-width: 200px;
@@ -156,46 +154,47 @@
             border-radius: 8px;
         }
         .attachment.x-post {
-            border: 1px solid #ddd;
+            border: 1px solid #000;
             border-radius: 8px;
             padding: 10px;
-            background-color: #f9f9f9;
+            background-color: #fff;
             max-width: 500px;
         }
         .attachment.x-post a {
-            color: #1DA1F2;
+            color: #333;
             text-decoration: none;
-            font-size: 14px;
+            font-size: 13px;
         }
         .attachment.x-post a:hover {
             text-decoration: underline;
         }
-        .attachment.youtube {
-            max-width: 300px;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .attachment.youtube iframe {
-            width: 100%;
-            height: 169px; /* 16:9 aspect ratio for 300px width */
-            border: none;
-        }
         .error {
-            color: red;
+            color: #000;
             text-align: center;
             margin: 20px;
             font-size: 16px;
+            background: #fff;
+            padding: 10px;
+            border: 2px solid #000;
+            border-radius: 8px;
+        }
+        .retry-btn {
+            display: block;
+            margin: 10px auto;
+            padding: 8px 16px;
+            border: 2px solid #000;
+            border-radius: 6px;
+            background: #e0e0e0;
+            cursor: pointer;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 14px;
         }
         @media (max-width: 768px) {
             .container {
                 grid-template-columns: 1fr;
             }
-            .attachment.x-post,
-            .attachment.youtube {
+            .attachment.x-post {
                 max-width: 100%;
-            }
-            .attachment.youtube iframe {
-                height: calc(100vw * 9 / 16); /* Maintain 16:9 aspect ratio */
             }
         }
     </style>
@@ -203,78 +202,91 @@
 <body>
     <div class="container" id="container"></div>
     <div class="error" id="error" style="display: none;"></div>
+    <button class="retry-btn" id="retry" style="display: none;">Retry Fetch</button>
 
     <!-- X Widget Script for Embedded Posts -->
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
     <script>
-        // Color palette for card headers
-        const headerColors = [
-            'color-0', // Blue
-            'color-1', // Green
-            'color-2', // Purple
-            'color-3'  // Orange
+        const headerColors = ['color-0', 'color-1', 'color-2', 'color-3'];
+        const fallbackData = [
+            {
+                name: 'Sample Cartoon Chat',
+                messages: [
+                    {
+                        text: 'Hey, look at this!',
+                        sender: 'left',
+                        timestamp: '10:30 AM, Jun 1, 2025',
+                        username: 'Mickey',
+                        photoUrl: 'https://via.placeholder.com/40?text=Mickey',
+                        attachment: { type: 'image', url: 'https://via.placeholder.com/200?text=Cartoon' }
+                    },
+                    {
+                        text: 'Wow, colorful!',
+                        sender: 'right',
+                        timestamp: '10:32 AM, Jun 1, 2025',
+                        username: 'Minnie',
+                        photoUrl: 'https://via.placeholder.com/40?text=Minnie',
+                        attachment: { type: 'xPost', embedCode: '<a href="https://twitter.com/X/status/1234567890123456789">Sample X Post</a>' }
+                    }
+                ]
+            }
         ];
 
-        // Function to extract YouTube video ID from URL
-        function getYouTubeVideoId(url) {
-            const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-            const match = url.match(regex);
-            return match ? match[1] : null;
-        }
-
-        // Function to create a card for a conversation
         function createCard(conversation, index) {
+            if (!conversation || !conversation.name || !Array.isArray(conversation.messages)) {
+                console.warn('Invalid conversation data:', conversation);
+                return null;
+            }
             const card = document.createElement('div');
             card.className = 'card';
             card.setAttribute('aria-label', `Conversation card: ${conversation.name}`);
             
             const header = document.createElement('div');
             header.className = `card-header ${headerColors[index % headerColors.length]}`;
-            header.textContent = conversation.name;
+            header.textContent = conversation.name || 'Untitled';
             
             const timeline = document.createElement('div');
             timeline.className = 'timeline';
             
             conversation.messages.forEach(message => {
                 const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${message.sender}`;
+                messageDiv.className = `message ${message.sender || 'left'}`;
                 
                 const avatar = document.createElement('img');
                 avatar.className = 'avatar';
-                avatar.src = message.photoUrl;
-                avatar.alt = `${message.username}'s avatar`;
+                avatar.src = message.photoUrl || 'https://via.placeholder.com/40?text=User';
+                avatar.alt = `${message.username || 'User'}'s avatar`;
                 avatar.onerror = () => { avatar.src = 'https://via.placeholder.com/40?text=Default'; };
                 
                 const content = document.createElement('div');
                 content.className = 'message-content';
                 
-                // Build attachment HTML
                 let attachmentHtml = '';
                 if (message.attachment) {
-                    if (message.attachment.type === 'image') {
-                        attachmentHtml = `<div class="attachment"><img src="${message.attachment.url}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'"></div>`;
-                    } else if (message.attachment.type === 'audio') {
-                        attachmentHtml = `<div class="attachment"><audio controls><source src="${message.attachment.url}" type="audio/mpeg"></audio></div>`;
-                    } else if (message.attachment.type === 'video') {
-                        attachmentHtml = `<div class="attachment"><video controls><source src="${message.attachment.url}" type="video/mp4"></video></div>`;
-                    } else if (message.attachment.type === 'xPost') {
-                        attachmentHtml = message.attachment.embedCode 
-                            ? `<div class="attachment x-post">${message.attachment.embedCode}</div>`
-                            : `<div class="attachment x-post"><a href="#" onclick="return false;">Error: Invalid X post embed code</a></div>`;
-                    } else if (message.attachment.type === 'youtube') {
-                        const videoId = getYouTubeVideoId(message.attachment.url);
-                        attachmentHtml = videoId 
-                            ? `<div class="attachment youtube"><iframe src="https://www.youtube.com/embed/${videoId}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-                            : `<div class="attachment youtube">Error: Invalid YouTube URL</div>`;
+                    try {
+                        if (message.attachment.type === 'image') {
+                            attachmentHtml = `<div class="attachment"><img src="${message.attachment.url}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'"></div>`;
+                        } else if (message.attachment.type === 'audio') {
+                            attachmentHtml = `<div class="attachment"><audio controls><source src="${message.attachment.url}" type="audio/mpeg"></audio></div>`;
+                        } else if (message.attachment.type === 'video') {
+                            attachmentHtml = `<div class="attachment"><video controls><source src="${message.attachment.url}" type="video/mp4"></video></div>`;
+                        } else if (message.attachment.type === 'xPost') {
+                            attachmentHtml = message.attachment.embedCode 
+                                ? `<div class="attachment x-post">${message.attachment.embedCode}</div>`
+                                : `<div class="attachment x-post"><a href="#" onclick="return false;">Error: Invalid X post embed code</a></div>`;
+                        }
+                    } catch (e) {
+                        console.error('Attachment error:', e);
+                        attachmentHtml = '<div class="attachment">Error: Invalid attachment</div>';
                     }
                 }
                 
                 content.innerHTML = `
-                    <div class="username">${message.username}</div>
-                    ${message.text}
+                    <div class="username">${message.username || 'User'}</div>
+                    ${message.text || 'No message'}
                     ${attachmentHtml}
-                    <div class="timestamp">${message.timestamp}</div>
+                    <div class="timestamp">${message.timestamp || 'Unknown time'}</div>
                 `;
                 
                 messageDiv.appendChild(avatar);
@@ -285,10 +297,8 @@
             card.appendChild(header);
             card.appendChild(timeline);
             
-            // Toggle timeline visibility on card click
             card.addEventListener('click', () => {
                 timeline.classList.toggle('active');
-                // Reinitialize X widgets after timeline is shown
                 if (timeline.classList.contains('active') && window.twttr) {
                     window.twttr.widgets.load(timeline);
                 }
@@ -297,27 +307,48 @@
             return card;
         }
 
-        // Fetch JSON from GitHub
-        const jsonUrl = 'https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/conversations.json';
-        fetch(jsonUrl)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to fetch JSON file');
+        async function loadConversations() {
+            const container = document.getElementById('container');
+            const errorDiv = document.getElementById('error');
+            const retryBtn = document.getElementById('retry');
+            container.innerHTML = '';
+            errorDiv.style.display = 'none';
+            retryBtn.style.display = 'none';
+            
+            try {
+                const jsonUrl = 'https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/conversations.json';
+                const response = await fetch(jsonUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const data = await response.json();
+                console.log('Fetched JSON:', data);
+                
+                if (!Array.isArray(data) || !data.length) {
+                    throw new Error('Invalid JSON: Empty or not an array');
                 }
-                return response.json();
-            })
-            .then(data => {
-                const container = document.getElementById('container');
+                
                 data.forEach((conversation, index) => {
                     const card = createCard(conversation, index);
-                    container.appendChild(card);
+                    if (card) container.appendChild(card);
                 });
-            })
-            .catch(error => {
-                const errorDiv = document.getElementById('error');
-                errorDiv.textContent = `Error: ${error.message}`;
+                
+                if (!container.children.length) {
+                    throw new Error('No valid conversations found');
+                }
+            } catch (error) {
+                console.error('Load error:', error);
+                errorDiv.textContent = `Error: ${error.message}. Using fallback data.`;
                 errorDiv.style.display = 'block';
-            });
+                retryBtn.style.display = 'inline-block';
+                
+                fallbackData.forEach((conversation, index) => {
+                    const card = createCard(conversation, index);
+                    if (card) container.appendChild(card);
+                });
+            }
+        }
+
+        document.getElementById('retry').addEventListener('click', loadConversations);
+        loadConversations();
     </script>
 </body>
 </html>
