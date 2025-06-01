@@ -168,6 +168,14 @@
         .attachment.x-post a:hover {
             text-decoration: underline;
         }
+        .attachment.youtube {
+            max-width: 280px;
+        }
+        .attachment.youtube iframe {
+            width: 100%;
+            height: 158px;
+            border: 0;
+        }
         .error {
             color: #000;
             text-align: center;
@@ -193,8 +201,11 @@
             .container {
                 grid-template-columns: 1fr;
             }
-            .attachment.x-post {
+            .attachment.x-post, .attachment.youtube {
                 max-width: 100%;
+            }
+            .attachment.youtube iframe {
+                height: calc(100vw * 9 / 16);
             }
         }
     </style>
@@ -222,16 +233,22 @@
                         attachment: { type: 'image', url: 'https://via.placeholder.com/200?text=Cartoon' }
                     },
                     {
-                        text: 'Wow, colorful!',
+                        text: 'Wow, check this video!',
                         sender: 'right',
                         timestamp: '10:32 AM, Jun 1, 2025',
                         username: 'Minnie',
                         photoUrl: 'https://via.placeholder.com/40?text=Minnie',
-                        attachment: { type: 'xPost', embedCode: '<a href="https://twitter.com/X/status/1234567890123456789">Sample X Post</a>' }
+                        attachment: { type: 'youtube', url: 'https://youtu.be/0SdcfsD_WVE?feature=shared' }
                     }
                 ]
             }
         ];
+
+        function getYouTubeVideoId(url) {
+            const regex = /[?&]v=([a-zA-Z0-9_-]{11})|youtu\.be\/([a-zA-Z0-9_-]{11})|embed\/([a-zA-Z0-9_-]{11})/;
+            const match = url.match(regex);
+            return match ? match[1] || match[2] || match[3] : null;
+        }
 
         function createCard(conversation, index) {
             if (!conversation || !conversation.name || !Array.isArray(conversation.messages)) {
@@ -275,6 +292,11 @@
                             attachmentHtml = message.attachment.embedCode 
                                 ? `<div class="attachment x-post">${message.attachment.embedCode}</div>`
                                 : `<div class="attachment x-post"><a href="#" onclick="return false;">Error: Invalid X post embed code</a></div>`;
+                        } else if (message.attachment.type === 'youtube') {
+                            const videoId = getYouTubeVideoId(message.attachment.url);
+                            attachmentHtml = videoId 
+                                ? `<div class="attachment youtube"><iframe title="YouTube video" src="https://www.youtube.com/embed/${videoId}?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+                                : `<div class="attachment youtube">Error: Invalid YouTube URL</div>`;
                         }
                     } catch (e) {
                         console.error('Attachment error:', e);
