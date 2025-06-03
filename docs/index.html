@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartoon Black-and-White Timeline with Colored Attachments</title>
+    <title>Cartoon Black-and-White Timeline with Pop-Up Attachments</title>
     <style>
         body {
             font-family: 'Comic Sans MS', cursive, sans-serif;
@@ -140,6 +140,7 @@
             border: 2px solid #000;
             border-radius: 8px;
             overflow: hidden;
+            cursor: pointer;
         }
         .attachment img {
             max-width: 200px;
@@ -176,6 +177,55 @@
             height: 158px;
             border: 0;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            border: 3px solid #000;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            position: relative;
+        }
+        .modal-content img {
+            max-width: 100%;
+            height: auto;
+        }
+        .modal-content audio {
+            width: 100%;
+        }
+        .modal-content video {
+            max-width: 100%;
+            height: auto;
+        }
+        .modal-content .x-post {
+            max-width: 100%;
+        }
+        .modal-content .youtube iframe {
+            width: 560px;
+            height: 315px;
+            max-width: 100%;
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #000;
+        }
         .error {
             color: #000;
             text-align: center;
@@ -207,6 +257,9 @@
             .attachment.youtube iframe {
                 height: calc(100vw * 9 / 16);
             }
+            .modal-content .youtube iframe {
+                height: calc(90vw * 9 / 16);
+            }
         }
     </style>
 </head>
@@ -214,6 +267,11 @@
     <div class="container" id="container"></div>
     <div class="error" id="error" style="display: none;"></div>
     <button class="retry-btn" id="retry" style="display: none;">Retry Fetch</button>
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modal-content">
+            <span class="close-btn" id="close-btn">&times;</span>
+        </div>
+    </div>
 
     <!-- X Widget Script for Embedded Posts -->
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
@@ -250,6 +308,50 @@
             return match ? match[1] || match[2] || match[3] : null;
         }
 
+        function openModal(type, content) {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.innerHTML = '<span class="close-btn" id="close-btn">&times;</span>';
+            
+            let html = '';
+            try {
+                if (type === 'image') {
+                    html = `<img src="${content}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'">`;
+                } else if (type === 'audio') {
+                    html = `<audio controls><source src="${content}" type="audio/mpeg"></audio>`;
+                } else if (type === 'video') {
+                    html = `<video controls><source src="${content}" type="video/mp4"></video>`;
+                } else if (type === 'xPost') {
+                    html = `<div class="x-post">${content}</div>`;
+                } else if (type === 'youtube') {
+                    const videoId = getYouTubeVideoId(content);
+                    html = videoId 
+                        ? `<div class="youtube"><iframe title="YouTube video" src="https://www.youtube.com/embed/${videoId}?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+                        : 'Error: Invalid YouTube URL';
+                }
+            } catch (e) {
+                console.error('Modal error:', e);
+                html = 'Error: Unable to load attachment';
+            }
+            
+            modalContent.innerHTML += html;
+            modal.style.display = 'flex';
+            
+            document.getElementById('close-btn').addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+            
+            if (type === 'xPost' && window.twttr) {
+                window.twttr.widgets.load(modalContent);
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.style.display = 'none';
+        }
+
         function createCard(conversation, index) {
             if (!conversation || !conversation.name || !Array.isArray(conversation.messages)) {
                 console.warn('Invalid conversation data:', conversation);
@@ -283,19 +385,18 @@
                 if (message.attachment) {
                     try {
                         if (message.attachment.type === 'image') {
-                            attachmentHtml = `<div class="attachment"><img src="${message.attachment.url}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'"></div>`;
+                            attachmentHtml = `<div class="attachment" onclick="openModal('image', '${message.attachment.url}')"><img src="${message.attachment.url}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'"></div>`;
                         } else if (message.attachment.type === 'audio') {
-                            attachmentHtml = `<div class="attachment"><audio controls><source src="${message.attachment.url}" type="audio/mpeg"></audio></div>`;
+                            attachmentHtml = `<div class="attachment" onclick="openModal('audio', '${message.attachment.url}')"><audio controls><source src="${message.attachment.url}" type="audio/mpeg"></audio></div>`;
                         } else if (message.attachment.type === 'video') {
-                            attachmentHtml = `<div class="attachment"><video controls><source src="${message.attachment.url}" type="video/mp4"></video></div>`;
+                            attachmentHtml = `<div class="attachment" onclick="openModal('video', '${message.attachment.url}')"><video controls><source src="https://via.placeholder.com/200?text=Video" alt="Video thumbnail"></video></div>`;
                         } else if (message.attachment.type === 'xPost') {
-                            attachmentHtml = message.attachment.embedCode 
-                                ? `<div class="attachment x-post">${message.attachment.embedCode}</div>`
-                                : `<div class="attachment x-post"><a href="#" onclick="return false;">Error: Invalid X post embed code</a></div>`;
+                            const embedCode = message.attachment.embedCode || '<a href="#" onclick="return false;">Failed to load post</a>';
+                            attachmentHtml = `<div class="attachment x-post" onclick="openModal('xPost', \`${embedCode.replace(/`/g, '\\`')}\`)">${embedCode}</div>`;
                         } else if (message.attachment.type === 'youtube') {
                             const videoId = getYouTubeVideoId(message.attachment.url);
                             attachmentHtml = videoId 
-                                ? `<div class="attachment youtube"><iframe title="YouTube video" src="https://www.youtube.com/embed/${videoId}?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+                                ? `<div class="attachment youtube" onclick="openModal('youtube', '${message.attachment.url}')"><iframe title="YouTube video" src="https://www.youtube.com/embed/${videoId}?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
                                 : `<div class="attachment youtube">Error: Invalid YouTube URL</div>`;
                         }
                     } catch (e) {
@@ -319,10 +420,12 @@
             card.appendChild(header);
             card.appendChild(timeline);
             
-            card.addEventListener('click', () => {
-                timeline.classList.toggle('active');
-                if (timeline.classList.contains('active') && window.twttr) {
-                    window.twttr.widgets.load(timeline);
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.attachment')) {
+                    timeline.classList.toggle('active');
+                    if (timeline.classList.contains('active') && window.twttr) {
+                        window.twttr.widgets.load(timeline);
+                    }
                 }
             });
             
