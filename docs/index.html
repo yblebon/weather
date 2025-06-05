@@ -2,478 +2,416 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartoon Black-and-White Timeline with Pop-Up Attachments</title>
+    <meta name="viewport" content="width=device-width, initial-scale="1.0">
+    <title>Weather Prediction with City Autocomplete</title>
     <style>
         body {
-            font-family: 'Comic Sans MS', cursive, sans-serif;
-            background-color: #f5f5f0;
-            margin: 0;
-            padding: 20px;
+            font-family: Arial,  sans-serif;
+            background-color: #f0f4f8;
             display: flex;
-            justify-content: center;
-            color: #000;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
         }
         .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
             max-width: 1200px;
             width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-top: 30px;
+        }
+        .input-section {
+            margin: 20px 0;
+        }
+        input[type="text"] input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            width: 300px;
+        }
+        .get-weather-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .get-weather-button:hover {
+            background-color: #357abd;
+        }
+        .prediction-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .prediction-buttons button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .prediction-buttons button:hover {
+            background-color: #357abd;
+        }
+        .prediction-buttons button.active {
+            background-color: #2a6db0;
+        }
+        .weather-cards {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 20px;
+            margin-top: 20px;
+            overflow-x: auto;
+            padding-bottom: 10px;
         }
         .card {
-            background-color: #fff;
-            border: 3px solid #000;
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-        .card:hover {
-            transform: scale(1.02);
-        }
-        .card-header {
-            padding: 15px;
-            color: #000;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
-            border-bottom: 2px solid #000;
-        }
-        .card-header.color-0 { background: #e0e0e0; }
-        .card-header.color-1 { background: #c0c0c0; }
-        .card-header.color-2 { background: #a0a0a0; }
-        .card-header.color-3 { background: #808080; }
-        .timeline {
-            position: relative;
-            padding: 15px 0;
-            display: none;
-        }
-        .timeline.active {
-            display: block;
-        }
-        .timeline::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 50%;
-            width: 4px;
-            background-color: #333;
-            transform: translateX(-50%);
-        }
-        .message {
-            display: flex;
-            margin: 15px 0;
-            position: relative;
-            align-items: flex-start;
-        }
-        .message.left {
-            justify-content: flex-start;
-        }
-        .message.right {
-            justify-content: flex-end;
-        }
-        .message-content {
-            max-width: 60%;
-            padding: 10px 14px;
-            border: 2px solid #000;
-            border-radius: 12px;
-            background-color: #fff;
-        }
-        .message.left .message-content {
-            margin-left: 50px;
-            background-color: #f0f0f0;
-        }
-        .message.right .message-content {
-            margin-right: 50px;
-            background-color: #d0d0d0;
-        }
-        .username {
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .timestamp {
-            font-size: 11px;
-            color: #444;
-            margin: 5px 0 0 10px;
-            position: absolute;
-            bottom: -18px;
-        }
-        .message.left .timestamp {
-            left: 50px;
-        }
-        .message.right .timestamp {
-            right: 50px;
-        }
-        .message::before {
-            content: '';
-            width: 10px;
-            height: 10px;
-            background-color: #000;
-            border-radius: 50%;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1;
-        }
-        .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin: 0 10px;
-            object-fit: cover;
-            border: 2px solid #000;
-            filter: grayscale(1) contrast(1.2);
-        }
-        .message.left .avatar {
-            order: -1;
-        }
-        .message.right .avatar {
-            order: 1;
-        }
-        .attachment {
-            margin-top: 8px;
-            max-width: 100%;
-            border: 2px solid #000;
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-        }
-        .attachment img {
-            max-width: 200px;
-            border-radius: 8px;
-            display: block;
-        }
-        .attachment audio {
-            width: 200px;
-        }
-        .attachment video {
-            max-width: 200px;
-            border-radius: 8px;
-        }
-        .attachment.x-post {
-            border: 1px solid #000;
-            border-radius: 8px;
-            padding: 10px;
-            background-color: #fff;
-            max-width: 500px;
-        }
-        .attachment.x-post a {
-            color: #333;
-            text-decoration: none;
-            font-size: 13px;
-        }
-        .attachment.x-post a:hover {
-            text-decoration: underline;
-        }
-        .attachment.youtube {
-            max-width: 280px;
-        }
-        .attachment.youtube iframe {
-            width: 100%;
-            height: 158px;
-            border: 0;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background-color: #fff;
-            border: 3px solid #000;
-            border-radius: 8px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            max-width: 90%;
-            max-height: 90%;
-            overflow: auto;
-            position: relative;
+            width: 300px;
+            text-align: center;
+            flex-shrink: 0;
         }
-        .modal-content img {
-            max-width: 100%;
-            height: auto;
+        .card h3 {
+            margin: 0 0 10px;
+            color: #333;
         }
-        .modal-content audio {
-            width: 100%;
+        .card p {
+            margin: 5px 0;
+            color: #666;
         }
-        .modal-content video {
-            max-width: 100%;
-            height: auto;
-        }
-        .modal-content .x-post {
-            max-width: 100%;
-        }
-        .modal-content .youtube iframe {
-            width: 560px;
-            height: 315px;
-            max-width: 100%;
-        }
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #000;
+        .hidden {
+            display: none;
         }
         .error {
-            color: #000;
-            text-align: center;
-            margin: 20px;
-            font-size: 16px;
-            background: #fff;
-            padding: 10px;
-            border: 2px solid #000;
-            border-radius: 8px;
+            color: red;
+            margin-top: 10px;
         }
-        .retry-btn {
-            display: block;
-            margin: 10px auto;
-            padding: 8px 16px;
-            border: 2px solid #000;
-            border-radius: 6px;
-            background: #e0e0e0;
-            cursor: pointer;
-            font-family: 'Comic Sans MS', cursive;
-            font-size: 14px;
-        }
-        @media (max-width: 768px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            .attachment.x-post, .attachment.youtube {
-                max-width: 100%;
-            }
-            .attachment.youtube iframe {
-                height: calc(100vw * 9 / 16);
-            }
-            .modal-content .youtube iframe {
-                height: calc(90vw * 9 / 16);
-            }
+        canvas {
+            max-width: 100%;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container" id="container"></div>
-    <div class="error" id="error" style="display: none;"></div>
-    <button class="retry-btn" id="retry" style="display: none;">Retry Fetch</button>
-    <div class="modal" id="modal">
-        <div class="modal-content" id="modal-content">
-            <span class="close-btn" id="close-btn">&times;</span>
+    <div class="container">
+        <h1>Weather Prediction</h1>
+        <div class="input-section">
+            <input type="text" id="cityInput" placeholder="Enter city name (e.g., New York, NY)">
+            <button class="get-weather-button" onclick="getWeather()">Get Weather</button>
         </div>
+        <div class="prediction-buttons">
+            <button id="btn24Hours" class="active" onclick="setPredictionWindow(24)">24 Hours</button>
+            <button id="btn3Days" onclick="setPredictionWindow(72)">3 Days</button>
+            <button id="btn5Days" onclick="setPredictionWindow(120)">5 Days</button>
+        </div>
+        <div id="weatherDisplay" class="weather-cards hidden">
+            <div class="card">
+                <h3>Temperature</h3>
+                <p id="tempData">Avg: Loading...</p>
+                <p id="tempHigh">High: Loading...</p>
+                <p id="tempLow">Low: Loading...</p>
+                <canvas id="tempChart" height="150"></canvas>
+            </div>
+            <div class="card">
+                <h3>Rainfall</h3>
+                <p id="rainChance">Chance: Loading...</p>
+                <p id="rainAmount">Amount: Loading...</p>
+                <canvas id="rainChart" height="150"></canvas>
+            </div>
+            <div class="card">
+                <h3>Wind</h3>
+                <p id="windSpeed">Speed: Loading...</p>
+                <p id="windDir">Direction: Loading...</p>
+                <canvas id="windChart" height="150"></canvas>
+            </div>
+        </div>
+        <div id="error" class="error hidden"></div>
     </div>
 
-    <!-- X Widget Script for Embedded Posts -->
-    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJswns9qd4jh6awTSYDgCcMBKIMkotbEY&libraries=places"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const headerColors = ['color-0', 'color-1', 'color-2', 'color-3'];
-        const fallbackData = [
-            {
-                name: 'Sample Cartoon Chat',
-                messages: [
-                    {
-                        text: 'Hey, look at this!',
-                        sender: 'left',
-                        timestamp: '10:30 AM, Jun 1, 2025',
-                        username: 'Mickey',
-                        photoUrl: 'https://via.placeholder.com/40?text=Mickey',
-                        attachment: { type: 'image', url: 'https://via.placeholder.com/200?text=Cartoon' }
-                    },
-                    {
-                        text: 'Wow, check this video!',
-                        sender: 'right',
-                        timestamp: '10:32 AM, Jun 1, 2025',
-                        username: 'Minnie',
-                        photoUrl: 'https://via.placeholder.com/40?text=Minnie',
-                        attachment: { type: 'youtube', url: 'https://youtu.be/0SdcfsD_WVE?feature=shared' }
-                    }
-                ]
-            }
-        ];
+        const API_KEY = 'AIzaSyDJswns9qd4jh6awTSYDgCcMBKIMkotbEY';
+        let autocomplete;
+        let tempChart;
+        let rainChart;
+        let windChart;
+        let predictionWindow = 24;
+        let lastLat = null;
+        let lastLng = null;
 
-        function getYouTubeVideoId(url) {
-            const regex = /[?&]v=([a-zA-Z0-9_-]{11})|youtu\.be\/([a-zA-Z0-9_-]{11})|embed\/([a-zA-Z0-9_-]{11})/;
-            const match = url.match(regex);
-            return match ? match[1] || match[2] || match[3] : null;
-        }
-
-        function openModal(type, content) {
-            const modal = document.getElementById('modal');
-            const modalContent = document.getElementById('modal-content');
-            modalContent.innerHTML = '<span class="close-btn" id="close-btn">&times;</span>';
-            
-            let html = '';
-            try {
-                if (type === 'image') {
-                    html = `<img src="${content}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'">`;
-                } else if (type === 'audio') {
-                    html = `<audio controls><source src="${content}" type="audio/mpeg"></audio>`;
-                } else if (type === 'video') {
-                    html = `<video controls><source src="${content}" type="video/mp4"></video>`;
-                } else if (type === 'xPost') {
-                    html = `<div class="x-post">${content}</div>`;
-                } else if (type === 'youtube') {
-                    const videoId = getYouTubeVideoId(content);
-                    html = videoId 
-                        ? `<div class="youtube"><iframe title="YouTube video" src="https://www.youtube.com/embed/${videoId}?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-                        : 'Error: Invalid YouTube URL';
-                }
-            } catch (e) {
-                console.error('Modal error:', e);
-                html = 'Error: Unable to load attachment';
-            }
-            
-            modalContent.innerHTML += html;
-            modal.style.display = 'flex';
-            
-            document.getElementById('close-btn').addEventListener('click', closeModal);
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModal();
+        // Initialize Google Places Autocomplete
+        function initAutocomplete() {
+            const cityInput = document.getElementById('cityInput');
+            autocomplete = new google.maps.places.Autocomplete(cityInput, {
+                types: ['(cities)'],
+                fields: ['geometry', 'name']
             });
-            
-            if (type === 'xPost' && window.twttr) {
-                window.twttr.widgets.load(modalContent);
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                console.log('Selected place:', place.name, place.geometry.location.lat(), place.geometry.location.lng());
+            });
+        }
+
+        // Set prediction window and update button states
+        function setPredictionWindow(hours) {
+            predictionWindow = hours;
+            document.getElementById('btn24Hours').classList.toggle('active', hours === 24);
+            document.getElementById('btn3Days').classList.toggle('active', hours === 72);
+            document.getElementById('btn5Days').classList.toggle('active', hours === 120);
+            if (lastLat !== null && lastLng !== null) {
+                getWeather(lastLat, lastLng);
             }
         }
 
-        function closeModal() {
-            const modal = document.getElementById('modal');
-            modal.style.display = 'none';
-        }
-
-        function createCard(conversation, index) {
-            if (!conversation || !conversation.name || !Array.isArray(conversation.messages)) {
-                console.warn('Invalid conversation data:', conversation);
-                return null;
-            }
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.setAttribute('aria-label', `Conversation card: ${conversation.name}`);
-            
-            const header = document.createElement('div');
-            header.className = `card-header ${headerColors[index % headerColors.length]}`;
-            header.textContent = conversation.name || 'Untitled';
-            
-            const timeline = document.createElement('div');
-            timeline.className = 'timeline';
-            
-            conversation.messages.forEach(message => {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${message.sender || 'left'}`;
-                
-                const avatar = document.createElement('img');
-                avatar.className = 'avatar';
-                avatar.src = message.photoUrl || 'https://via.placeholder.com/40?text=User';
-                avatar.alt = `${message.username || 'User'}'s avatar`;
-                avatar.onerror = () => { avatar.src = 'https://via.placeholder.com/40?text=Default'; };
-                
-                const content = document.createElement('div');
-                content.className = 'message-content';
-                
-                let attachmentHtml = '';
-                if (message.attachment) {
-                    try {
-                        if (message.attachment.type === 'image') {
-                            attachmentHtml = `<div class="attachment" onclick="openModal('image', '${message.attachment.url}')"><img src="${message.attachment.url}" alt="Attachment" onerror="this.src='https://via.placeholder.com/200?text=Error'"></div>`;
-                        } else if (message.attachment.type === 'audio') {
-                            attachmentHtml = `<div class="attachment" onclick="openModal('audio', '${message.attachment.url}')"><audio controls><source src="${message.attachment.url}" type="audio/mpeg"></audio></div>`;
-                        } else if (message.attachment.type === 'video') {
-                            attachmentHtml = `<div class="attachment" onclick="openModal('video', '${message.attachment.url}')"><video controls><source src="https://via.placeholder.com/200?text=Video" alt="Video thumbnail"></video></div>`;
-                        } else if (message.attachment.type === 'xPost') {
-                            const embedCode = message.attachment.embedCode || '<a href="#" onclick="return false;">Failed to load post</a>';
-                            attachmentHtml = `<div class="attachment x-post" onclick="openModal('xPost', \`${embedCode.replace(/`/g, '\\`')}\`)">${embedCode}</div>`;
-                        } else if (message.attachment.type === 'youtube') {
-                            const videoId = getYouTubeVideoId(message.attachment.url);
-                            attachmentHtml = videoId 
-                                ? `<div class="attachment youtube" onclick="openModal('youtube', '${message.attachment.url}')"><iframe title="YouTube video" src="https://www.youtube.com/embed/${videoId}?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-                                : `<div class="attachment youtube">Error: Invalid YouTube URL</div>`;
-                        }
-                    } catch (e) {
-                        console.error('Attachment error:', e);
-                        attachmentHtml = '<div class="attachment">Error: Invalid attachment</div>';
-                    }
-                }
-                
-                content.innerHTML = `
-                    <div class="username">${message.username || 'User'}</div>
-                    ${message.text || 'No message'}
-                    ${attachmentHtml}
-                    <div class="timestamp">${message.timestamp || 'Unknown time'}</div>
-                `;
-                
-                messageDiv.appendChild(avatar);
-                messageDiv.appendChild(content);
-                timeline.appendChild(messageDiv);
-            });
-            
-            card.appendChild(header);
-            card.appendChild(timeline);
-            
-            card.addEventListener('click', (e) => {
-                if (!e.target.closest('.attachment')) {
-                    timeline.classList.toggle('active');
-                    if (timeline.classList.contains('active') && window.twttr) {
-                        window.twttr.widgets.load(timeline);
-                    }
-                }
-            });
-            
-            return card;
-        }
-
-        async function loadConversations() {
-            const container = document.getElementById('container');
+        async function getWeather(lat = null, lng = null) {
+            const cityInput = document.getElementById('cityInput').value.trim();
+            const weatherDisplay = document.getElementById('weatherDisplay');
             const errorDiv = document.getElementById('error');
-            const retryBtn = document.getElementById('retry');
-            container.innerHTML = '';
-            errorDiv.style.display = 'none';
-            retryBtn.style.display = 'none';
-            
+
+            // Reset display
+            weatherDisplay.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+            errorDiv.textContent = '';
+
+            let latitude = lat;
+            let longitude = lng;
+
             try {
-                const jsonUrl = 'https://raw.githubusercontent.com/yblebon/datasources/refs/heads/main/conversations.json';
-                const response = await fetch(jsonUrl);
-                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                const data = await response.json();
-                console.log('Fetched JSON:', data);
-                
-                if (!Array.isArray(data) || !data.length) {
-                    throw new Error('Invalid JSON: Empty or not an array');
+                // Geocode if no coordinates provided
+                if (!latitude && !longitude) {
+                    if (cityInput === '') {
+                        errorDiv.textContent = 'Please enter a city name!';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+                    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cityInput)}&components=locality&key=${API_KEY}`;
+                    const geocodeResponse = await fetch(geocodeUrl);
+                    const geocodeData = await geocodeResponse.json();
+
+                    if (geocodeData.status !== 'OK' || !geocodeData.results || geocodeData.results.length === 0) {
+                        console.log('Geocoding response:', geocodeData);
+                        throw new Error(`City not found or geocoding failed for "${cityInput}". Status: ${geocodeData.status}`);
+                    }
+
+                    const location = geocodeData.results[0].geometry.location;
+                    latitude = location.lat;
+                    longitude = location.lng;
+                    console.log(`Geocoded ${cityInput} to: Latitude ${latitude}, Longitude ${longitude}`);
                 }
-                
-                data.forEach((conversation, index) => {
-                    const card = createCard(conversation, index);
-                    if (card) container.appendChild(card);
+
+                // Store last coordinates
+                lastLat = latitude;
+                lastLng = longitude;
+
+                // Fetch current weather
+                const currentWeatherUrl = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${API_KEY}&location.latitude=${latitude}&location.longitude=${longitude}&unitsSystem=METRIC`;
+                const currentWeatherResponse = await fetch(currentWeatherUrl);
+                if (!currentWeatherResponse.ok) {
+                    throw new Error('Current Weather API request failed: ' + currentWeatherResponse.statusText);
+                }
+                const currentWeatherData = await currentWeatherResponse.json();
+
+                // Fetch hourly forecast with pagination
+                let allForecastHours = [];
+                let nextPageToken = null;
+                do {
+                    const forecastUrl = `https://weather.googleapis.com/v1/forecast/hours:lookup?key=${API_KEY}&location.latitude=${latitude}&location.longitude=${longitude}&unitsSystem=METRIC&hours=${predictionWindow}${nextPageToken ? `&pageToken=${nextPageToken}` : ''}`;
+                    const forecastResponse = await fetch(forecastUrl);
+                    if (!forecastResponse.ok) {
+                        throw new Error('Forecast API request failed: ' + forecastResponse.statusText);
+                    }
+                    const forecastData = await forecastResponse.json();
+                    console.log(`Forecast API response (${predictionWindow} hours, pageToken=${nextPageToken || 'none'}):`, forecastData);
+                    console.log(`Received ${forecastData.forecastHours?.length || 0} hours`);
+
+                    if (!forecastData.forecastHours || !Array.isArray(forecastData.forecastHours)) {
+                        console.warn('Hourly forecast data missing or invalid:', forecastData);
+                        throw new Error('Hourly forecast data is unavailable');
+                    }
+
+                    allForecastHours = allForecastHours.concat(forecastData.forecastHours);
+                    nextPageToken = forecastData.nextPageToken || null;
+                } while (nextPageToken && allForecastHours.length < predictionWindow);
+
+                console.log(`Total forecast hours received: ${allForecastHours.length}`);
+
+                // Warn if fewer hours received
+                if (allForecastHours.length < predictionWindow) {
+                    errorDiv.textContent = `Warning: Received only ${allForecastHours.length} hours of data for ${predictionWindow}-hour forecast.`;
+                    errorDiv.classList.remove('hidden');
+                }
+
+                // Update current weather data
+                document.getElementById('tempData').textContent = `Avg: ${currentWeatherData.temperature?.degrees ?? 'N/A'}°C`;
+                document.getElementById('tempHigh').textContent = `High: ${currentWeatherData.currentConditionsHistory?.maxTemperature?.degrees ?? 'N/A'}°C`;
+                document.getElementById('tempLow').textContent = `Low: ${currentWeatherData.currentConditionsHistory?.minTemperature?.degrees ?? 'N/A'}°C`;
+
+                document.getElementById('rainChance').textContent = `Chance: ${currentWeatherData.precipitation?.probability?.percent ?? 'N/A'}%`;
+                document.getElementById('rainAmount').textContent = `Amount: ${currentWeatherData.precipitation?.qpf?.quantity ?? 'N/A'} mm`;
+
+                document.getElementById('windSpeed').textContent = `Speed: ${currentWeatherData.wind?.speed?.value ?? 'N/A'} km/h`;
+                document.getElementById('windDir').textContent = `Direction: ${currentWeatherData.wind?.direction?.cardinal ?? 'N/A'}`;
+
+                // Process forecast data
+                const hourlyData = allForecastHours.slice(0, predictionWindow);
+                if (hourlyData.length === 0) {
+                    throw new Error('No forecast data available for the selected window');
+                }
+
+                const labels = hourlyData.map(forecast => {
+                    const date = new Date(forecast.interval.startTime);
+                    return `${date.getUTCMonth() + 1}/${date.getUTCDate()} ${String(date.getUTCHours()).padStart(2, '0')}:00`;
                 });
-                
-                if (!container.children.length) {
-                    throw new Error('No valid conversations found');
-                }
+                const temperatures = hourlyData.map(forecast => forecast.temperature?.degrees ?? 0);
+                const rainProbabilities = hourlyData.map(forecast => forecast.precipitation?.probability?.percent ?? 0);
+                const windSpeeds = hourlyData.map(forecast => forecast.wind?.speed?.value ?? 0);
+
+                // Destroy previous charts
+                if (tempChart) tempChart.destroy();
+                if (rainChart) rainChart.destroy();
+                if (windChart) windChart.destroy();
+
+                // Temperature Chart
+                const tempCtx = document.getElementById('tempChart').getContext('2d');
+                tempChart = new Chart(tempCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Temperature (°C)',
+                            data: temperatures,
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Temperature (°C)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time (UTC)'
+                                },
+                                ticks: {
+                                    maxTicksLimit: predictionWindow <= 24 ? 12 : 10
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Rainfall Chart
+                const rainCtx = document.getElementById('rainChart').getContext('2d');
+                rainChart = new Chart(rainCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Rain Probability (%)',
+                            data: rainProbabilities,
+                            borderColor: '#4a90e2',
+                            backgroundColor: 'rgba(74, 144, 226, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Probability (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time (UTC)'
+                                },
+                                ticks: {
+                                    maxTicksLimit: predictionWindow <= 24 ? 12 : 10
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Wind Speed Chart
+                const windCtx = document.getElementById('windChart').getContext('2d');
+                windChart = new Chart(windCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Wind Speed (km/h)',
+                            data: windSpeeds,
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Speed (km/h)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time (UTC)'
+                                },
+                                ticks: {
+                                    maxTicksLimit: predictionWindow <= 24 ? 12 : 10
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Show the weather cards
+                weatherDisplay.classList.remove('hidden');
             } catch (error) {
-                console.error('Load error:', error);
-                errorDiv.textContent = `Error: ${error.message}. Using fallback data.`;
-                errorDiv.style.display = 'block';
-                retryBtn.style.display = 'inline-block';
-                
-                fallbackData.forEach((conversation, index) => {
-                    const card = createCard(conversation, index);
-                    if (card) container.appendChild(card);
-                });
+                errorDiv.textContent = `Error: ${error.message}`;
+                errorDiv.classList.remove('hidden');
+                console.error('Error fetching weather:', error);
             }
         }
 
-        document.getElementById('retry').addEventListener('click', loadConversations);
-        loadConversations();
+        // Initialize autocomplete
+        google.maps.event.addDomListener(window, 'load', initAutocomplete);
     </script>
 </body>
 </html>
