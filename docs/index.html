@@ -26,6 +26,10 @@
         }
         .input-section {
             margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
         }
         input[type="text"] {
             padding: 10px;
@@ -33,6 +37,15 @@
             border: 2px solid #ccc;
             border-radius: 5px;
             width: 300px;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            width: 324px; /* Match input width with padding */
+            background-color: white;
+            cursor: pointer;
         }
         .get-weather-button {
             padding: 10px 20px;
@@ -42,7 +55,6 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            margin-left: 10px;
         }
         .get-weather-button:hover {
             background-color: #357abd;
@@ -103,7 +115,10 @@
         canvas {
             max-width: 100%;
             margin-top: 10px;
-            cursor: crosshair; /* Better for dragging */
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
         }
     </style>
 </head>
@@ -112,6 +127,9 @@
         <h1>Weather Prediction</h1>
         <div class="input-section">
             <input type="text" id="cityInput" placeholder="Enter city name (e.g., New York, NY)">
+            <select id="cityHistory" onchange="selectCityFromHistory()">
+                <option value="">Select a city from history</option>
+            </select>
             <button class="get-weather-button" onclick="getWeather()">Get Weather</button>
         </div>
         <div class="prediction-buttons">
@@ -144,7 +162,7 @@
     </div>
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJswns9qd4jh6awTSYDgCcMBKIMkotbEY&libraries=places"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const API_KEY = 'AIzaSyDJswns9qd4jh6awTSYDgCcMBKIMkotbEY';
         let autocomplete;
@@ -154,7 +172,7 @@
         let predictionWindow = 24;
         let lastLat = null;
         let lastLng = null;
-        let selectedTime = null; // Store the current draggable line position
+        let selectedTime = null;
 
         // Custom Chart.js plugin for draggable vertical line
         const draggableLinePlugin = {
@@ -196,63 +214,45 @@
                     ctx.restore();
                 }
             },
-            beforeEvent: (chart, args, options) => {
-                const event = args.event;
-                console.log(`Chart event: ${event.type}, x: ${event.x}, y: ${event.y}`); // Debug log
+            beforeEvent: (chart, args) => {
+                const event = args.event.native;
+                console.log(`Chart event: ${event.type} at (${event.x}, ${event.y})`); // Debug log
+                const xAxis = chart.scales.x;
+                const selectedLabel = selectedTime || getCurrentCESTLabel();
+                const xPixel = xAxis.getPixelForValue(selectedLabel);
+                const tolerance = 10; // Pixels to start dragging
+
                 if (event.type === 'mousedown') {
-                    const xAxis = chart.scales.x;
-                    const labels = chart.data.labels;
-                    const xPixel = event.x;
-                    // Find closest label
-                    let closestLabel = labels[0];
-                    let minDiff = Infinity;
-                    labels.forEach(label => {
-                        const pixel = xAxis.getPixelForValue(label);
-                        const diff = Math.abs(pixel - xPixel);
-                        if (diff < minDiff) {
-                            minDiff = diff;
-                            closestLabel = label;
-                        }
-                    });
-                    console.log(`Mousedown closest label: ${closestLabel}, pixel: ${xAxis.getPixelForValue(closestLabel)}`); // Debug
-                    selectedTime = closestLabel;
-                    chart.dragging = true;
-                    // Update all charts
-                    [tempChart, rainChart, windChart].forEach(c => {
-                        if (c && c !== chart) c.update();
-                    });
-                    chart.update();
-                    args.event.stopPropagation();
+                    if (Math.abs(event.x - xPixel) <= tolerance) {
+                        chart.dragging = true;
+                    }
                 } else if (event.type === 'mousemove' && chart.dragging) {
-                    const xAxis = chart.scales.x;
-                    const labels = chart.data.labels;
-                    const xPixel = event.x;
-                    // Find closest label
-                    let closestLabel = labels[0];
-                    let minDiff = Infinity;
-                    labels.forEach(label => {
-                        const pixel = xAxis.getPixelForValue(label);
-                        const diff = Math.abs(pixel - xPixel);
-                        if (diff < minDiff) {
-                            minDiff = diff;
-                            closestLabel = label;
-                        }
-                    });
-                    console.log(`Mousemove closest label: ${closestLabel}`); // Debug
-                    selectedTime = closestLabel;
-                    // Update all charts
-                    [tempChart, rainChart, windChart].forEach(c => {
-                        if (c && c !== chart) c.update();
-                    });
-                    chart.update();
-                    args.event.stopPropagation();
-                } else if (event.type === 'mouseup') {
-                    console.log('Mouseup event'); // Debug
+                    updateSelectedTime(chart, event.x);
+                    args.changed = true;
+                } else if (event.type === 'mouseup' || event.type === 'mouseout') {
                     chart.dragging = false;
-                    args.event.stopPropagation();
                 }
             }
         };
+
+        // Update selected time and sync charts
+        function updateSelectedTime(chart, xPixel) {
+            const xAxis = chart.scales.x;
+            const labels = chart.data.labels;
+            let closestLabel = labels[0];
+            let minDiff = Infinity;
+            labels.forEach(label => {
+                const diff = Math.abs(xAxis.getPixelForValue(label) - xPixel);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestLabel = label;
+                }
+            });
+            selectedTime = closestLabel;
+            [tempChart, rainChart, windChart].forEach(c => {
+                if (c) c.update();
+            });
+        }
 
         // Register custom plugin
         Chart.register(draggableLinePlugin);
@@ -260,9 +260,44 @@
         // Get current CEST time label (MM/DD HH:00)
         function getCurrentCESTLabel() {
             const now = new Date();
-            // Convert to CEST (UTC+2)
             const cestTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
             return `${cestTime.getUTCMonth() + 1}/${cestTime.getUTCDate()} ${String(cestTime.getUTCHours()).padStart(2, '0')}:00`;
+        }
+
+        // Load city history from localStorage
+        function loadCityHistory() {
+            const history = JSON.parse(localStorage.getItem('cityHistory') || '[]');
+            const select = document.getElementById('cityHistory');
+            select.innerHTML = '<option value="">Select a city from history</option>';
+            history.forEach(city => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify(city);
+                option.textContent = city.name;
+                select.appendChild(option);
+            });
+        }
+
+        // Save city to localStorage
+        function saveCityToHistory(name, lat, lng) {
+            let history = JSON.parse(localStorage.getItem('cityHistory') || '[]');
+            // Avoid duplicates
+            history = history.filter(city => city.name !== name);
+            // Add new city
+            history.unshift({ name, lat, lng });
+            // Limit to 10 cities
+            if (history.length > 10) history.pop();
+            localStorage.setItem('cityHistory', JSON.stringify(history));
+            loadCityHistory();
+        }
+
+        // Select city from history
+        function selectCityFromHistory() {
+            const select = document.getElementById('cityHistory');
+            if (select.value) {
+                const city = JSON.parse(select.value);
+                document.getElementById('cityInput').value = city.name;
+                getWeather(city.lat, city.lng);
+            }
         }
 
         // Initialize Google Places Autocomplete
@@ -276,6 +311,7 @@
                 const place = autocomplete.getPlace();
                 console.log('Selected place:', place.name, place.geometry.location.lat(), place.geometry.location.lng());
             });
+            loadCityHistory();
         }
 
         // Set prediction window and update button states
@@ -298,10 +334,11 @@
             weatherDisplay.classList.add('hidden');
             errorDiv.classList.add('hidden');
             errorDiv.textContent = '';
-            selectedTime = null; // Reset selected time
+            selectedTime = null;
 
             let latitude = lat;
             let longitude = lng;
+            let cityName = cityInput;
 
             try {
                 // Geocode if no coordinates provided
@@ -323,7 +360,10 @@
                     const location = geocodeData.results[0].geometry.location;
                     latitude = location.lat;
                     longitude = location.lng;
+                    cityName = geocodeData.results[0].formatted_address;
                     console.log(`Geocoded ${cityInput} to: Latitude ${latitude}, Longitude ${longitude}`);
+                    // Save to history
+                    saveCityToHistory(cityName, latitude, longitude);
                 }
 
                 // Store last coordinates
@@ -373,11 +413,11 @@
                 document.getElementById('tempHigh').textContent = `High: ${currentWeatherData.currentConditionsHistory?.maxTemperature?.degrees ?? 'N/A'}°C`;
                 document.getElementById('tempLow').textContent = `Low: ${currentWeatherData.currentConditionsHistory?.minTemperature?.degrees ?? 'N/A'}°C`;
 
-                document.getElementById('rainChance').textContent = `Chance: ${currentWeatherData.precipitation?.probability?.default ?? 'N/A'}%`;
-                document.getElementById('rainAmount').textContent = `Amount: ${currentWeatherData.precipitation?.qpf?.quantity ?? 'N/A'} mm/h`;
+                document.getElementById('rainChance').textContent = `Chance: ${currentWeatherData.precipitation?.probability?.percent ?? 'N/A'}%`;
+                document.getElementById('rainAmount').textContent = `Amount: ${currentWeatherData.precipitation?.qpf?.quantity ?? 'N/A'} mm`;
 
                 document.getElementById('windSpeed').textContent = `Speed: ${currentWeatherData.wind?.speed?.value ?? 'N/A'} km/h`;
-                document.getElementById('windDir').textContent = `Direction: ${currentWeatherData.wind?.direction?.primary ?? 'N/A'}`;
+                document.getElementById('windDir').textContent = `Direction: ${currentWeatherData.wind?.direction?.cardinal ?? 'N/A'}`;
 
                 // Process forecast data
                 const hourlyData = allForecastHours.slice(0, predictionWindow);
@@ -387,12 +427,11 @@
 
                 const labels = hourlyData.map(forecast => {
                     const date = new Date(forecast.interval.startTime);
-                    // Convert to CEST (UTC+2)
                     const cestDate = new Date(date.getTime() + 2 * 60 * 60 * 1000);
                     return `${cestDate.getUTCMonth() + 1}/${cestDate.getUTCDate()} ${String(cestDate.getUTCHours()).padStart(2, '0')}:00`;
                 });
                 const temperatures = hourlyData.map(forecast => forecast.temperature?.degrees ?? 0);
-                const rainProbabilities = hourlyData.map(forecast => forecast.precipitation?.probability?.default ?? 0);
+                const rainProbabilities = hourlyData.map(forecast => forecast.precipitation?.probability?.percent ?? 0);
                 const windSpeeds = hourlyData.map(forecast => forecast.wind?.speed?.value ?? 0);
 
                 // Destroy previous charts
@@ -420,7 +459,6 @@
                         plugins: {
                             draggableLine: true
                         },
-                        events: ['mousedown', 'mousemove', 'mouseup'],
                         scales: {
                             y: {
                                 beginAtZero: false,
@@ -462,7 +500,6 @@
                         plugins: {
                             draggableLine: true
                         },
-                        events: ['mousedown', 'mousemove', 'mouseup'],
                         scales: {
                             y: {
                                 beginAtZero: true,
@@ -505,7 +542,6 @@
                         plugins: {
                             draggableLine: true
                         },
-                        events: ['mousedown', 'mousemove', 'mouseup'],
                         scales: {
                             y: {
                                 beginAtZero: true,
