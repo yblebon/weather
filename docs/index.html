@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale="1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather Prediction with City Autocomplete</title>
     <style>
         body {
-            font-family: Arial,  sans-serif;
+            font-family: Arial, sans-serif;
             background-color: #f0f4f8;
             display: flex;
             flex-direction: column;
@@ -27,7 +27,7 @@
         .input-section {
             margin: 20px 0;
         }
-        input[type="text"] input[type="text"] {
+        input[type="text"] {
             padding: 10px;
             font-size: 16px;
             border: 2px solid #ccc;
@@ -103,6 +103,7 @@
         canvas {
             max-width: 100%;
             margin-top: 10px;
+            cursor: crosshair; /* Better for dragging */
         }
     </style>
 </head>
@@ -143,7 +144,7 @@
     </div>
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJswns9qd4jh6awTSYDgCcMBKIMkotbEY&libraries=places"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script>
         const API_KEY = 'AIzaSyDJswns9qd4jh6awTSYDgCcMBKIMkotbEY';
         let autocomplete;
@@ -153,6 +154,116 @@
         let predictionWindow = 24;
         let lastLat = null;
         let lastLng = null;
+        let selectedTime = null; // Store the current draggable line position
+
+        // Custom Chart.js plugin for draggable vertical line
+        const draggableLinePlugin = {
+            id: 'draggableLine',
+            afterDraw: (chart) => {
+                const ctx = chart.ctx;
+                const xAxis = chart.scales.x;
+                const yAxis = chart.scales.y;
+                const selectedLabel = selectedTime || getCurrentCESTLabel();
+
+                if (xAxis.getPixelForValue(selectedLabel) !== undefined) {
+                    const x = xAxis.getPixelForValue(selectedLabel);
+                    // Draw vertical line
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(x, yAxis.top);
+                    ctx.lineTo(x, yAxis.bottom);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = 'black';
+                    ctx.stroke();
+                    // Draw label
+                    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                    ctx.fillRect(x - 25, yAxis.top - 20, 50, 20);
+                    ctx.fillStyle = 'white';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(selectedLabel === getCurrentCESTLabel() ? 'Now' : selectedLabel, x, yAxis.top - 10);
+                    // Draw metric value
+                    const dataset = chart.data.datasets[0];
+                    const index = chart.data.labels.indexOf(selectedLabel);
+                    if (index >= 0) {
+                        const value = dataset.data[index];
+                        const unit = chart.canvas.id === 'tempChart' ? '°C' : chart.canvas.id === 'rainChart' ? '%' : 'km/h';
+                        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                        ctx.fillRect(x - 30, yAxis.top + 10, 60, 20);
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(`${value}${unit}`, x, yAxis.top + 20);
+                    }
+                    ctx.restore();
+                }
+            },
+            beforeEvent: (chart, args, options) => {
+                const event = args.event;
+                console.log(`Chart event: ${event.type}, x: ${event.x}, y: ${event.y}`); // Debug log
+                if (event.type === 'mousedown') {
+                    const xAxis = chart.scales.x;
+                    const labels = chart.data.labels;
+                    const xPixel = event.x;
+                    // Find closest label
+                    let closestLabel = labels[0];
+                    let minDiff = Infinity;
+                    labels.forEach(label => {
+                        const pixel = xAxis.getPixelForValue(label);
+                        const diff = Math.abs(pixel - xPixel);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestLabel = label;
+                        }
+                    });
+                    console.log(`Mousedown closest label: ${closestLabel}, pixel: ${xAxis.getPixelForValue(closestLabel)}`); // Debug
+                    selectedTime = closestLabel;
+                    chart.dragging = true;
+                    // Update all charts
+                    [tempChart, rainChart, windChart].forEach(c => {
+                        if (c && c !== chart) c.update();
+                    });
+                    chart.update();
+                    args.event.stopPropagation();
+                } else if (event.type === 'mousemove' && chart.dragging) {
+                    const xAxis = chart.scales.x;
+                    const labels = chart.data.labels;
+                    const xPixel = event.x;
+                    // Find closest label
+                    let closestLabel = labels[0];
+                    let minDiff = Infinity;
+                    labels.forEach(label => {
+                        const pixel = xAxis.getPixelForValue(label);
+                        const diff = Math.abs(pixel - xPixel);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestLabel = label;
+                        }
+                    });
+                    console.log(`Mousemove closest label: ${closestLabel}`); // Debug
+                    selectedTime = closestLabel;
+                    // Update all charts
+                    [tempChart, rainChart, windChart].forEach(c => {
+                        if (c && c !== chart) c.update();
+                    });
+                    chart.update();
+                    args.event.stopPropagation();
+                } else if (event.type === 'mouseup') {
+                    console.log('Mouseup event'); // Debug
+                    chart.dragging = false;
+                    args.event.stopPropagation();
+                }
+            }
+        };
+
+        // Register custom plugin
+        Chart.register(draggableLinePlugin);
+
+        // Get current CEST time label (MM/DD HH:00)
+        function getCurrentCESTLabel() {
+            const now = new Date();
+            // Convert to CEST (UTC+2)
+            const cestTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+            return `${cestTime.getUTCMonth() + 1}/${cestTime.getUTCDate()} ${String(cestTime.getUTCHours()).padStart(2, '0')}:00`;
+        }
 
         // Initialize Google Places Autocomplete
         function initAutocomplete() {
@@ -187,6 +298,7 @@
             weatherDisplay.classList.add('hidden');
             errorDiv.classList.add('hidden');
             errorDiv.textContent = '';
+            selectedTime = null; // Reset selected time
 
             let latitude = lat;
             let longitude = lng;
@@ -261,11 +373,11 @@
                 document.getElementById('tempHigh').textContent = `High: ${currentWeatherData.currentConditionsHistory?.maxTemperature?.degrees ?? 'N/A'}°C`;
                 document.getElementById('tempLow').textContent = `Low: ${currentWeatherData.currentConditionsHistory?.minTemperature?.degrees ?? 'N/A'}°C`;
 
-                document.getElementById('rainChance').textContent = `Chance: ${currentWeatherData.precipitation?.probability?.percent ?? 'N/A'}%`;
-                document.getElementById('rainAmount').textContent = `Amount: ${currentWeatherData.precipitation?.qpf?.quantity ?? 'N/A'} mm`;
+                document.getElementById('rainChance').textContent = `Chance: ${currentWeatherData.precipitation?.probability?.default ?? 'N/A'}%`;
+                document.getElementById('rainAmount').textContent = `Amount: ${currentWeatherData.precipitation?.qpf?.quantity ?? 'N/A'} mm/h`;
 
                 document.getElementById('windSpeed').textContent = `Speed: ${currentWeatherData.wind?.speed?.value ?? 'N/A'} km/h`;
-                document.getElementById('windDir').textContent = `Direction: ${currentWeatherData.wind?.direction?.cardinal ?? 'N/A'}`;
+                document.getElementById('windDir').textContent = `Direction: ${currentWeatherData.wind?.direction?.primary ?? 'N/A'}`;
 
                 // Process forecast data
                 const hourlyData = allForecastHours.slice(0, predictionWindow);
@@ -275,10 +387,12 @@
 
                 const labels = hourlyData.map(forecast => {
                     const date = new Date(forecast.interval.startTime);
-                    return `${date.getUTCMonth() + 1}/${date.getUTCDate()} ${String(date.getUTCHours()).padStart(2, '0')}:00`;
+                    // Convert to CEST (UTC+2)
+                    const cestDate = new Date(date.getTime() + 2 * 60 * 60 * 1000);
+                    return `${cestDate.getUTCMonth() + 1}/${cestDate.getUTCDate()} ${String(cestDate.getUTCHours()).padStart(2, '0')}:00`;
                 });
                 const temperatures = hourlyData.map(forecast => forecast.temperature?.degrees ?? 0);
-                const rainProbabilities = hourlyData.map(forecast => forecast.precipitation?.probability?.percent ?? 0);
+                const rainProbabilities = hourlyData.map(forecast => forecast.precipitation?.probability?.default ?? 0);
                 const windSpeeds = hourlyData.map(forecast => forecast.wind?.speed?.value ?? 0);
 
                 // Destroy previous charts
@@ -303,6 +417,10 @@
                     },
                     options: {
                         responsive: true,
+                        plugins: {
+                            draggableLine: true
+                        },
+                        events: ['mousedown', 'mousemove', 'mouseup'],
                         scales: {
                             y: {
                                 beginAtZero: false,
@@ -314,7 +432,7 @@
                             x: {
                                 title: {
                                     display: true,
-                                    text: 'Time (UTC)'
+                                    text: 'Time (CEST)'
                                 },
                                 ticks: {
                                     maxTicksLimit: predictionWindow <= 24 ? 12 : 10
@@ -341,6 +459,10 @@
                     },
                     options: {
                         responsive: true,
+                        plugins: {
+                            draggableLine: true
+                        },
+                        events: ['mousedown', 'mousemove', 'mouseup'],
                         scales: {
                             y: {
                                 beginAtZero: true,
@@ -353,7 +475,7 @@
                             x: {
                                 title: {
                                     display: true,
-                                    text: 'Time (UTC)'
+                                    text: 'Time (CEST)'
                                 },
                                 ticks: {
                                     maxTicksLimit: predictionWindow <= 24 ? 12 : 10
@@ -380,6 +502,10 @@
                     },
                     options: {
                         responsive: true,
+                        plugins: {
+                            draggableLine: true
+                        },
+                        events: ['mousedown', 'mousemove', 'mouseup'],
                         scales: {
                             y: {
                                 beginAtZero: true,
@@ -391,7 +517,7 @@
                             x: {
                                 title: {
                                     display: true,
-                                    text: 'Time (UTC)'
+                                    text: 'Time (CEST)'
                                 },
                                 ticks: {
                                     maxTicksLimit: predictionWindow <= 24 ? 12 : 10
