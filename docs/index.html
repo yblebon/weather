@@ -1,215 +1,317 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <title>Weather Forecast – Table & Chart</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-    body{font-family:Arial,sans-serif;margin:0;padding:1rem;background:#f5f5f5}
-    h1{margin-top:0}
-    .controls{margin-bottom:1rem}
-    .controls button{margin-right:.5rem;padding:.4rem .8rem}
-    #forecast{width:100%;border-collapse:collapse;background:#fff;margin-top:1rem}
-    #forecast th,#forecast td{padding:.5rem;border:1px solid #ddd;text-align:center}
-    #forecast th{background:#e0e0e0}
-    .loader{border:4px solid #f3f3f3;border-top:4px solid #3498db;border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;margin:auto}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    #error{color:red}
-    canvas{max-width:100%;margin-top:1rem;background:#fff;padding:1rem;border:1px solid #ddd}
+  body{font-family:Arial,sans-serif;margin:0;padding:1rem;background:#f5f5f5}
+  h1{margin-top:0}
+  .controls{margin-bottom:1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+  .controls input{padding:.3rem .5rem}
+  .controls button{padding:.4rem .8rem}
+  #forecast{width:100%;border-collapse:collapse;background:#fff;margin-top:1rem}
+  #forecast th,#forecast td{padding:.5rem;border:1px solid #ddd;text-align:center}
+  #forecast th{background:#e0e0e0}
+  .loader{border:4px solid #f3f3f3;border-top:4px solid #3498db;border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;margin:auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #error{color:red}
+  canvas{width:100%;max-width:100%;margin-top:1rem;background:#fff;padding:1rem;border:1px solid #ddd;box-sizing:border-box}
 </style>
 </head>
 <body>
 <h1>Weather Forecast</h1>
 
 <div class="controls">
-    <label for="city">City (Europe): </label>
-    <input id="city" placeholder="e.g., Tournus, FR">
-    <button id="loadBtn">Load</button>
-    <button id="saveBtn">Save City</button>
-    <button class="filter" data-range="24">24 h</button>
-    <button class="filter" data-range="72">3 days</button>
-    <button class="filter" data-range="120">5 days</button>
+  <label for="city">City (Europe):</label>
+  <input id="city" placeholder="e.g., Tournus, FR">
+  <button id="loadBtn">Load</button>
+  <button id="saveBtn">Save City</button>
+  <button class="filter" data-range="24">24 h</button>
+  <button class="filter" data-range="72">3 days</button>
+  <button class="filter" data-range="120">5 days</button>
+  <label style="margin-left:8px;">
+    <input type="radio" name="metric" value="rain" checked> Rain %
+  </label>
+  <label>
+    <input type="radio" name="metric" value="wind"> Wind (km/h)
+  </label>
+  <label>
+    <input type="radio" name="metric" value="both"> Both (dual axis)
+  </label>
 </div>
 
 <div id="status"></div>
 
 <table id="forecast" hidden>
-    <thead>
-        <tr>
-            <th>Date & Hour</th>
-            <th>Summary</th>
-            <th>Temp (°C)</th>
-            <th>Wind</th>
-            <th>Precip %</th>
-            <th>Precip type</th>
-            <th>UV Index</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
+  <thead>
+    <tr>
+      <th>Date & Hour</th>
+      <th>Summary</th>
+      <th>Temp (°C)</th>
+      <th>Wind</th>
+      <th>Precip %</th>
+      <th>Precip type</th>
+      <th>UV Index</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
 </table>
 
-<canvas id="myChart"></canvas>
+<canvas id="myChart" height="200"></canvas>
 
 <script>
 /* ---------- CONFIG ---------- */
-const apiKey = '08f8d938d07d078d4c809a2a9f88c7c9';   // ← replace with a real key
+const apiKey = '08f8d938d07d078d4c809a2a9f88c7c9'; // ← replace with a real key
 /* ---------------------------- */
 
-const loadBtn   = document.getElementById('loadBtn');
-const saveBtn   = document.getElementById('saveBtn');
-const cityInp   = document.getElementById('city');
+const loadBtn = document.getElementById('loadBtn');
+const saveBtn = document.getElementById('saveBtn');
+const cityInp = document.getElementById('city');
 const statusDiv = document.getElementById('status');
-const table     = document.getElementById('forecast');
-const tbody     = table.querySelector('tbody');
+const table = document.getElementById('forecast');
+const tbody = table.querySelector('tbody');
 const filterBtns = document.querySelectorAll('.filter');
-const ctx       = document.getElementById('myChart').getContext('2d');
+const metricRadios = document.querySelectorAll('input[name="metric"]');
+const ctx = document.getElementById('myChart').getContext('2d');
 
-let fullData = [];   // all hourly rows after a load
+let fullData = []; // array of {datetime, summary, temp, windKmh, precipProb, precipType, uv}
 let chart = null;
 
-/* ---- Load saved city on start ---- */
+/* Load saved city */
 window.addEventListener('DOMContentLoaded', () => {
-    const saved = localStorage.getItem('weatherCity');
-    if (saved) {
-        cityInp.value = saved;
-        fetchForecast(saved);
-    }
+  const saved = localStorage.getItem('weatherCity');
+  if (saved) {
+    cityInp.value = saved;
+    fetchForecast(saved);
+  }
 });
 
-/* ---- Button handlers ---- */
+/* Handlers */
 loadBtn.onclick = () => {
-    const city = cityInp.value.trim();
-    if (!city) return alert('Enter a city');
-    fetchForecast(city);
+  const city = cityInp.value.trim();
+  if (!city) return alert('Enter a city');
+  fetchForecast(city);
 };
 
 saveBtn.onclick = () => {
-    const city = cityInp.value.trim();
-    if (!city) return alert('Enter a city to save');
-    localStorage.setItem('weatherCity', city);
-    alert('City saved');
+  const city = cityInp.value.trim();
+  if (!city) return alert('Enter a city to save');
+  localStorage.setItem('weatherCity', city);
+  alert('City saved');
 };
 
 filterBtns.forEach(btn => {
-    btn.onclick = () => {
-        const hrs = Number(btn.dataset.range);
-        displayRows(hrs);
-        updateChart(hrs);
-    };
+  btn.onclick = () => {
+    const hrs = Number(btn.dataset.range);
+    displayRows(hrs);
+    updateChart(hrs);
+  };
 });
 
-/* ---- Core functions ---- */
-async function fetchForecast(city) {
-    statusDiv.innerHTML = '<div class="loader"></div>';
-    table.hidden = true;
-    tbody.innerHTML = '';
-    fullData = [];
+metricRadios.forEach(r => {
+  r.onchange = () => {
+    updateChart(currentHoursDisplayed() || 24);
+  };
+});
 
-    try {
-        // 1️⃣ Geocode
-        const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${apiKey}`);
-        const geo = await geoRes.json();
-        if (!geo.length) throw new Error('City not found');
-        const {lat, lon, name, country} = geo[0];
+/* Helpers */
+function degToCompass(deg){
+  const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg/22.5)%16];
+}
+function currentHoursDisplayed(){
+  return tbody.children.length;
+}
 
-        // 2️⃣ 5‑day / 3‑hour forecast (free)
-        const fRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
-        const fData = await fRes.json();
-        if (!fData.list) throw new Error('Forecast data missing');
+/* Fetch and build fullData using free 5-day/3-hour endpoint */
+async function fetchForecast(city){
+  statusDiv.innerHTML = '<div class="loader"></div>';
+  table.hidden = true;
+  tbody.innerHTML = '';
+  fullData = [];
 
-        // 3️⃣ Build hourly rows (expand each 3‑hour block)
-        fData.list.forEach(block => {
-            const start = new Date(block.dt * 1000);
-            const temp = Math.round(block.main.temp);
-            const wind = `${Math.round(block.wind.speed * 3.6)} km/h ${degToCompass(block.wind.deg)}`;
-            const precipProb = Math.round((block.pop || 0) * 100);
-            const precipType = block.rain ? 'Rain' : block.snow ? 'Snow' : 'None';
-            const summary = block.weather[0].description;
-            const uv = 0; // not provided by free endpoint
+  try {
+    const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${apiKey}`);
+    const geo = await geoRes.json();
+    if (!geo.length) throw new Error('City not found');
+    const {lat, lon, name, country} = geo[0];
 
-            for (let i = 0; i < 3; i++) {
-                const hourDate = new Date(start.getTime() + i * 3600 * 1000);
-                const dateStr = hourDate.toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});
-                const hourStr = hourDate.getHours().toString().padStart(2, '0') + ':00';
-                fullData.push({
-                    datetime: `${dateStr} ${hourStr}`,
-                    summary,
-                    temp,
-                    wind,
-                    precipProb,
-                    precipType,
-                    uv
-                });
-            }
+    const fRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+    const fData = await fRes.json();
+    if (!fData.list) throw new Error('Forecast data missing');
+
+    // Expand each 3-hour block into 3 hourly rows
+    fData.list.forEach(block => {
+      const start = new Date(block.dt * 1000);
+      const temp = Math.round(block.main.temp);
+      const windKmh = Math.round((block.wind?.speed || 0) * 3.6);
+      const windDir = degToCompass(block.wind?.deg || 0);
+      const precipProb = Math.round((block.pop || 0) * 100);
+      const precipType = block.rain ? 'Rain' : block.snow ? 'Snow' : 'None';
+      const summary = block.weather?.[0]?.description || '';
+      const uv = 0; // not available in free endpoint
+
+      for (let i=0;i<3;i++){
+        const hourDate = new Date(start.getTime() + i*3600*1000);
+        const dateStr = hourDate.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+        const hourStr = hourDate.getHours().toString().padStart(2,'0') + ':00';
+        fullData.push({
+          datetime: `${dateStr} ${hourStr}`,
+          summary,
+          temp,
+          windKmh,
+          windDir,
+          precipProb,
+          precipType,
+          uv
         });
-
-        statusDiv.innerHTML = `<h2>${name}, ${country}</h2>`;
-        displayRows(24);
-        updateChart(24);
-    } catch (e) {
-        statusDiv.innerHTML = `<p id="error">Error: ${e.message}</p>`;
-    }
-}
-
-/* Show rows in the table */
-function displayRows(hours) {
-    tbody.innerHTML = '';
-    const rows = fullData.slice(0, hours);
-    rows.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${r.datetime}</td>
-            <td>${r.summary}</td>
-            <td>${r.temp}</td>
-            <td>${r.wind}</td>
-            <td>${r.precipProb}</td>
-            <td>${r.precipType}</td>
-            <td>${r.uv}</td>
-        `;
-        tbody.appendChild(tr);
+      }
     });
-    table.hidden = rows.length === 0;
+
+    statusDiv.innerHTML = `<h2>${name}, ${country}</h2>`;
+    displayRows(24);
+    updateChart(24);
+  } catch (e) {
+    statusDiv.innerHTML = `<p id="error">Error: ${e.message}</p>`;
+  }
 }
 
-/* Update (or create) the Chart.js line chart */
-function updateChart(hours) {
-    const dataSlice = fullData.slice(0, hours);
-    const labels = dataSlice.map(r => r.datetime);
-    const temps  = dataSlice.map(r => r.temp);
+/* Display rows in table */
+function displayRows(hours){
+  tbody.innerHTML = '';
+  const rows = fullData.slice(0, hours);
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.datetime}</td>
+      <td>${r.summary}</td>
+      <td>${r.temp}</td>
+      <td>${r.windKmh} km/h ${r.windDir}</td>
+      <td>${r.precipProb}</td>
+      <td>${r.precipType}</td>
+      <td>${r.uv}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  table.hidden = rows.length === 0;
+}
 
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Temperature (°C)',
-                data: temps,
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75,192,192,0.1)',
-                tension: 0.2,
-                pointRadius: 3
-            }]
+/* Update Chart.js chart
+   - default: show Temperature (left axis) and Rain % (right axis) if mode 'both' or 'rain' selected
+   - if 'wind' selected show wind on right axis
+*/
+function updateChart(hours){
+  const mode = document.querySelector('input[name="metric"]:checked')?.value || 'rain';
+  const dataSlice = fullData.slice(0, hours);
+  const labels = dataSlice.map(d => d.datetime);
+  const temps = dataSlice.map(d => d.temp);
+  const rains = dataSlice.map(d => d.precipProb);
+  const winds = dataSlice.map(d => d.windKmh);
+
+  const datasets = [{
+    label: 'Temperature (°C)',
+    data: temps,
+    yAxisID: 'y',
+    borderColor: 'rgb(75,192,192)',
+    backgroundColor: 'rgba(75,192,192,0.1)',
+    tension: 0.2,
+    pointRadius:3
+  }];
+
+  if (mode === 'rain') {
+    datasets.push({
+      label: 'Precip %',
+      data: rains,
+      yAxisID: 'yRight',
+      borderColor: 'rgb(54,162,235)',
+      backgroundColor: 'rgba(54,162,235,0.1)',
+      tension: 0.2,
+      pointStyle: 'rectRounded'
+    });
+  } else if (mode === 'wind') {
+    datasets.push({
+      label: 'Wind (km/h)',
+      data: winds,
+      yAxisID: 'yRight',
+      borderColor: 'rgb(255,159,64)',
+      backgroundColor: 'rgba(255,159,64,0.1)',
+      tension: 0.2
+    });
+  } else if (mode === 'both') {
+    datasets.push({
+      label: 'Precip %',
+      data: rains,
+      yAxisID: 'yRight',
+      borderColor: 'rgb(54,162,235)',
+      backgroundColor: 'rgba(54,162,235,0.08)',
+      tension: 0.2
+    });
+    datasets.push({
+      label: 'Wind (km/h)',
+      data: winds,
+      yAxisID: 'yRight2',
+      borderColor: 'rgb(255,159,64)',
+      backgroundColor: 'rgba(255,159,64,0.08)',
+      tension: 0.2,
+      borderDash: [6,4]
+    });
+  }
+
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      stacked: false,
+      scales: {
+        x: {
+          title: { display: true, text: 'Date & Time' },
+          ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 12 }
         },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    title: {display: true, text: 'Date & Time'},
-                    ticks: {autoSkip: true, maxTicksLimit: 12}
-                },
-                y: {
-                    title: {display: true, text: 'Temp (°C)'}
-                }
-            }
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: { display: true, text: 'Temp (°C)' }
+        },
+        yRight: {
+          type: 'linear',
+          display: (mode !== 'none'),
+          position: 'right',
+          title: { display: true, text: (mode === 'wind' ? 'Wind (km/h)' : 'Precip %') },
+          grid: { drawOnChartArea: false },
+          min: 0
+        },
+        yRight2: {
+          type: 'linear',
+          display: (mode === 'both'),
+          position: 'right',
+          title: { display: true, text: 'Wind (km/h)' },
+          grid: { drawOnChartArea: false },
+          offset: true,
+          min: 0
         }
-    });
-}
-
-/* Helper – wind direction */
-function degToCompass(deg) {
-    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-    return dirs[Math.round(deg / 22.5) % 16];
+      },
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.dataset.label || '';
+              const value = context.formattedValue;
+              if (label.includes('Precip')) return label + ': ' + value + '%';
+              if (label.includes('Wind')) return label + ': ' + value + ' km/h';
+              if (label.includes('Temp')) return label + ': ' + value + ' °C';
+              return label + ': ' + value;
+            }
+          }
+        }
+      }
+    }
+  });
 }
 </script>
 </body>
