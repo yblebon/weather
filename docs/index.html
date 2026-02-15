@@ -1,44 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Weather Forecast – Table & Chart</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-  body{font-family:Arial,sans-serif;margin:0;padding:1rem;background:#f5f5f5}
-  h1{margin-top:0}
-  .controls{margin-bottom:1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
-  .controls input{padding:.3rem .5rem}
-  .controls button{padding:.4rem .8rem}
-  #forecast{width:100%;border-collapse:collapse;background:#fff;margin-top:1rem}
-  #forecast th,#forecast td{padding:.5rem;border:1px solid #ddd;text-align:center}
-  #forecast th{background:#e0e0e0}
-  .loader{border:4px solid #f3f3f3;border-top:4px solid #3498db;border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;margin:auto}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  #error{color:red}
-  canvas{width:100%;max-width:100%;margin-top:1rem;background:#fff;padding:1rem;border:1px solid #ddd;box-sizing:border-box}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3498db">
+  <meta name="description" content="Weather forecast – table & chart">
+  <title>Weather Forecast</title>
+
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@0.454.0"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --primary: #3498db;
+      --bg: #f5f5f5;
+      --card: white;
+      --text: #333;
+    }
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: 1rem;
+      line-height: 1.5;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.2rem;
+      font-size: clamp(1.6rem, 5vw, 2.2rem);
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .controls input, .controls button, .controls label {
+      padding: 0.55rem 1.1rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    .controls button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .controls button:hover { background: #2980b9; }
+    .filter.active { background: #2c3e50 !important; color: white; }
+    .lucide {
+      width: 1.4em;
+      height: 1.4em;
+      stroke-width: 2;
+    }
+    #current {
+      margin: 0 auto 1.5rem;
+      max-width: 640px;
+      padding: 1.3rem;
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      gap: 1.3rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #currentIcon .lucide { width: 90px; height: 90px; stroke-width: 1.4; }
+    #currentText h2 { margin: 0; font-size: 1.6rem; }
+    #currentTemp { font-size: 2.8rem; font-weight: 700; }
+    #status { text-align: center; min-height: 3rem; padding: 1rem; }
+    .loader {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid var(--primary);
+      border-radius: 50%;
+      width: 40px; height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 1.5rem auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #error { color: #c0392b; font-weight: bold; }
+    table#forecast {
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto 2rem;
+      border-collapse: collapse;
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+    #forecast th, #forecast td {
+      padding: 0.8rem;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+    }
+    #forecast th { background: #f8f9fa; font-weight: 600; }
+    #forecast tr:hover { background: #f0f8ff; }
+    #forecast .lucide { width: 48px; height: 48px; stroke-width: 1.6; }
+    #chartContainer {
+      width: 100%;
+      max-width: 1000px;
+      height: clamp(320px, 65vh, 480px);
+      margin: 0 auto;
+      position: relative;
+      background: var(--card);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    canvas { width: 100% !important; height: 100% !important; }
+
+    @media (max-width: 640px) {
+      body { padding: 0.8rem; }
+      .controls { flex-direction: column; align-items: stretch; }
+      #current { flex-direction: column; text-align: center; padding: 1rem; }
+      #currentTemp { font-size: 2.4rem; }
+      #forecast th, #forecast td { font-size: 0.92rem; padding: 0.7rem; }
+    }
+  </style>
 </head>
 <body>
+
 <h1>Weather Forecast</h1>
 
 <div class="controls">
-  <label for="city">City (Europe):</label>
-  <input id="city" placeholder="e.g., Tournus, FR">
-  <button id="loadBtn">Load</button>
-  <button id="saveBtn">Save City</button>
-  <button class="filter" data-range="24">24 h</button>
-  <button class="filter" data-range="72">3 days</button>
-  <button class="filter" data-range="120">5 days</button>
-  <label style="margin-left:8px;">
-    <input type="radio" name="metric" value="rain" checked> Rain %
-  </label>
-  <label>
-    <input type="radio" name="metric" value="wind"> Wind (km/h)
-  </label>
-  <label>
-    <input type="radio" name="metric" value="both"> Both (dual axis)
-  </label>
+  <input id="city" placeholder="City (e.g. Tournus, FR)" value="">
+  <button id="loadBtn"><i data-lucide="search" class="lucide"></i> Load</button>
+  <button id="saveBtn"><i data-lucide="bookmark" class="lucide"></i> Save</button>
+  <button id="refreshBtn"><i data-lucide="refresh-cw" class="lucide"></i></button>
+
+  <button class="filter" data-range="24">24 h</button>
+  <button class="filter" data-range="72">3 d</button>
+  <button class="filter" data-range="120">5 d</button>
+
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-top:0.4rem;">
+    <label><input type="radio" name="metric" value="rain" checked> Rain %</label>
+    <label><input type="radio" name="metric" value="wind"> Wind</label>
+    <label><input type="radio" name="metric" value="both"> Both</label>
+  </div>
+</div>
+
+<div id="current" style="display:none;">
+  <div id="currentIcon"></div>
+  <div id="currentText">
+    <h2 id="currentCity"></h2>
+    <div id="currentTemp"></div>
+    <div id="currentFeels"></div>
+    <div id="currentDesc"></div>
+  </div>
 </div>
 
 <div id="status"></div>
@@ -46,147 +167,195 @@
 <table id="forecast" hidden>
   <thead>
     <tr>
-      <th>Date & Hour</th>
-      <th>Summary</th>
-      <th>Temp (°C)</th>
+      <th>Time</th>
+      <th></th>
+      <th>Weather</th>
+      <th>Temp</th>
+      <th>Feels</th>
       <th>Wind</th>
-      <th>Precip %</th>
-      <th>Precip type</th>
-      <th>UV Index</th>
+      <th>Rain %</th>
+      <th>Type</th>
+      <th>UV</th>
     </tr>
   </thead>
   <tbody></tbody>
 </table>
 
-<canvas id="myChart" height="200"></canvas>
+<div id="chartContainer">
+  <canvas id="myChart"></canvas>
+</div>
 
 <script>
-/* ---------- CONFIG ---------- */
-const apiKey = '08f8d938d07d078d4c809a2a9f88c7c9'; // ← replace with a real key
-/* ---------------------------- */
+// ────────────────────────────────────────────────
+const API_KEY = 'ca699b20eac9fac41390137b6cbfc66b'; // ← replace
 
-const loadBtn = document.getElementById('loadBtn');
-const saveBtn = document.getElementById('saveBtn');
-const cityInp = document.getElementById('city');
-const statusDiv = document.getElementById('status');
-const table = document.getElementById('forecast');
-const tbody = table.querySelector('tbody');
+// Lucide icon mapping
+function getWeatherIcon(desc = '') {
+  const s = desc.toLowerCase();
+  if (s.includes('rain') || s.includes('shower') || s.includes('drizzle')) return 'cloud-rain';
+  if (s.includes('snow')) return 'snowflake';
+  if (s.includes('thunder') || s.includes('storm')) return 'cloud-lightning';
+  if (s.includes('cloud')) return 'cloud';
+  if (s.includes('fog') || s.includes('mist')) return 'cloud-fog';
+  if (s.includes('clear') || s.includes('sunny')) return 'sun';
+  return 'cloud';
+}
+
+// Elements
+const cityInp    = document.getElementById('city');
+const loadBtn    = document.getElementById('loadBtn');
+const saveBtn    = document.getElementById('saveBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const statusDiv  = document.getElementById('status');
+const table      = document.getElementById('forecast');
+const tbody      = table.tBodies[0];
 const filterBtns = document.querySelectorAll('.filter');
 const metricRadios = document.querySelectorAll('input[name="metric"]');
-const ctx = document.getElementById('myChart').getContext('2d');
+const ctx        = document.getElementById('myChart').getContext('2d');
 
-let fullData = []; // array of {datetime, summary, temp, windKmh, precipProb, precipType, uv}
+let fullData = [];
 let chart = null;
+let currentUV = 0;
 
-/* Load saved city */
+// ────────────────────────────────────────────────
+// Service Worker + update handling
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const installing = reg.installing;
+          if (installing) {
+            installing.addEventListener('statechange', () => {
+              if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                if (confirm('New version available. Reload now?')) {
+                  window.location.reload();
+                }
+              }
+            });
+          }
+        });
+      })
+      .catch(err => console.warn('Service Worker failed:', err));
+  });
+}
+
+// ────────────────────────────────────────────────
+// Init Lucide once
+lucide.createIcons();
+
+// Load saved city
 window.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('weatherCity');
   if (saved) {
     cityInp.value = saved;
     fetchForecast(saved);
   }
+  lucide.createIcons();
 });
 
-/* Handlers */
-loadBtn.onclick = () => {
-  const city = cityInp.value.trim();
-  if (!city) return alert('Enter a city');
-  fetchForecast(city);
-};
-
-saveBtn.onclick = () => {
-  const city = cityInp.value.trim();
-  if (!city) return alert('Enter a city to save');
-  localStorage.setItem('weatherCity', city);
-  alert('City saved');
-};
+// Handlers
+loadBtn.onclick    = () => { const c = cityInp.value.trim(); if (c) fetchForecast(c); };
+saveBtn.onclick    = () => { const c = cityInp.value.trim(); if (c) { localStorage.setItem('weatherCity', c); alert('City saved'); } };
+refreshBtn.onclick = () => { const c = cityInp.value.trim(); if (c) fetchForecast(c); };
 
 filterBtns.forEach(btn => {
   btn.onclick = () => {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     const hrs = Number(btn.dataset.range);
     displayRows(hrs);
     updateChart(hrs);
   };
 });
 
-metricRadios.forEach(r => {
-  r.onchange = () => {
-    updateChart(currentHoursDisplayed() || 24);
-  };
-});
+metricRadios.forEach(r => r.onchange = () => updateChart(tbody.children.length || 24));
 
-/* Helpers */
-function degToCompass(deg){
-  const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-  return dirs[Math.round(deg/22.5)%16];
-}
-function currentHoursDisplayed(){
-  return tbody.children.length;
-}
-
-/* Fetch and build fullData using free 5-day/3-hour endpoint */
-async function fetchForecast(city){
+// ────────────────────────────────────────────────
+async function fetchForecast(city) {
   statusDiv.innerHTML = '<div class="loader"></div>';
   table.hidden = true;
   tbody.innerHTML = '';
   fullData = [];
+  document.getElementById('current').style.display = 'none';
 
   try {
-    const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${apiKey}`);
-    const geo = await geoRes.json();
+    // Geocoding
+    const geo = await (await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API_KEY}`)).json();
     if (!geo.length) throw new Error('City not found');
-    const {lat, lon, name, country} = geo[0];
+    const { lat, lon, name, country } = geo[0];
 
-    const fRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
-    const fData = await fRes.json();
-    if (!fData.list) throw new Error('Forecast data missing');
+    // Current
+    const cur = await (await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`)).json();
+    currentUV = Math.round(cur.uvi ?? 0);
+    const curDesc = cur.weather?.[0]?.description ?? '—';
+    const curIcon = getWeatherIcon(curDesc);
+    const curTemp = Math.round(cur.main.temp);
+    const feels = Math.round(cur.main.feels_like);
 
-    // Expand each 3-hour block into 3 hourly rows
-    fData.list.forEach(block => {
+    document.getElementById('currentCity').textContent = `${name}, ${country}`;
+    document.getElementById('currentTemp').textContent = `${curTemp}°C`;
+    document.getElementById('currentFeels').textContent = `Feels like ${feels}°C`;
+    document.getElementById('currentDesc').textContent = curDesc;
+    document.getElementById('currentIcon').innerHTML = `<i data-lucide="${curIcon}" class="lucide"></i>`;
+    document.getElementById('current').style.display = 'flex';
+
+    // Forecast
+    const forecast = await (await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`)).json();
+    if (!forecast.list) throw new Error('No forecast data');
+
+    forecast.list.forEach(block => {
       const start = new Date(block.dt * 1000);
       const temp = Math.round(block.main.temp);
+      const feels_like = Math.round(block.main.feels_like);
       const windKmh = Math.round((block.wind?.speed || 0) * 3.6);
       const windDir = degToCompass(block.wind?.deg || 0);
       const precipProb = Math.round((block.pop || 0) * 100);
-      const precipType = block.rain ? 'Rain' : block.snow ? 'Snow' : 'None';
-      const summary = block.weather?.[0]?.description || '';
-      const uv = 0; // not available in free endpoint
+      const precipType = block.rain?.['3h'] ? 'Rain' : block.snow?.['3h'] ? 'Snow' : 'None';
+      const summary = block.weather?.[0]?.description || '—';
+      const iconName = getWeatherIcon(summary);
+      const hour = start.getHours();
+      const uv = (hour >= 6 && hour <= 18) ? currentUV : 0;
 
-      for (let i=0;i<3;i++){
-        const hourDate = new Date(start.getTime() + i*3600*1000);
-        const dateStr = hourDate.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
-        const hourStr = hourDate.getHours().toString().padStart(2,'0') + ':00';
+      for (let i = 0; i < 3; i++) {
+        const t = new Date(start.getTime() + i * 3600000);
+        const dateStr = t.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+        const hourStr = t.getHours().toString().padStart(2,'0') + ':00';
         fullData.push({
           datetime: `${dateStr} ${hourStr}`,
-          summary,
-          temp,
-          windKmh,
-          windDir,
-          precipProb,
-          precipType,
-          uv
+          iconName, summary, temp, feels_like, windKmh, windDir, precipProb, precipType, uv
         });
       }
     });
 
-    statusDiv.innerHTML = `<h2>${name}, ${country}</h2>`;
-    displayRows(24);
-    updateChart(24);
-  } catch (e) {
-    statusDiv.innerHTML = `<p id="error">Error: ${e.message}</p>`;
+    statusDiv.innerHTML = '';
+    document.querySelector('.filter[data-range="24"]').click();
+    lucide.createIcons();
+
+  } catch (err) {
+    statusDiv.innerHTML = `<div id="error">Error: ${err.message}</div>`;
   }
 }
 
-/* Display rows in table */
-function displayRows(hours){
+function degToCompass(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg / 22.5) % 16] || '?';
+}
+
+function displayRows(hours) {
   tbody.innerHTML = '';
-  const rows = fullData.slice(0, hours);
-  rows.forEach(r => {
+  const slice = fullData.slice(0, hours);
+  slice.forEach(r => {
     const tr = document.createElement('tr');
+    if (r.precipProb > 60) tr.style.background = '#e3f2fd';
+    else if (r.windKmh > 40) tr.style.background = '#fff3e0';
+
     tr.innerHTML = `
       <td>${r.datetime}</td>
-      <td>${r.summary}</td>
-      <td>${r.temp}</td>
+      <td><i data-lucide="${r.iconName}" class="lucide"></i></td>
+      <td style="text-transform:capitalize;">${r.summary}</td>
+      <td>${r.temp}°C</td>
+      <td>${r.feels_like}°C</td>
       <td>${r.windKmh} km/h ${r.windDir}</td>
       <td>${r.precipProb}</td>
       <td>${r.precipType}</td>
@@ -194,122 +363,62 @@ function displayRows(hours){
     `;
     tbody.appendChild(tr);
   });
-  table.hidden = rows.length === 0;
+  table.hidden = !slice.length;
+  lucide.createIcons();
 }
 
-/* Update Chart.js chart
-   - default: show Temperature (left axis) and Rain % (right axis) if mode 'both' or 'rain' selected
-   - if 'wind' selected show wind on right axis
-*/
-function updateChart(hours){
+function updateChart(hours) {
+  if (chart) chart.destroy();
   const mode = document.querySelector('input[name="metric"]:checked')?.value || 'rain';
-  const dataSlice = fullData.slice(0, hours);
-  const labels = dataSlice.map(d => d.datetime);
-  const temps = dataSlice.map(d => d.temp);
-  const rains = dataSlice.map(d => d.precipProb);
-  const winds = dataSlice.map(d => d.windKmh);
+  const data = fullData.slice(0, hours);
+  const labels = data.map(d => d.datetime);
+  const temps = data.map(d => d.temp);
+  const rains = data.map(d => d.precipProb);
+  const winds = data.map(d => d.windKmh);
 
   const datasets = [{
     label: 'Temperature (°C)',
     data: temps,
     yAxisID: 'y',
     borderColor: 'rgb(75,192,192)',
-    backgroundColor: 'rgba(75,192,192,0.1)',
-    tension: 0.2,
-    pointRadius:3
+    tension: 0.25,
+    pointRadius: 3
   }];
 
-  if (mode === 'rain') {
+  if (mode === 'rain' || mode === 'both') {
     datasets.push({
-      label: 'Precip %',
+      label: 'Rain %',
       data: rains,
       yAxisID: 'yRight',
       borderColor: 'rgb(54,162,235)',
-      backgroundColor: 'rgba(54,162,235,0.1)',
-      tension: 0.2,
-      pointStyle: 'rectRounded'
+      tension: 0.25
     });
-  } else if (mode === 'wind') {
+  }
+  if (mode === 'wind' || mode === 'both') {
     datasets.push({
       label: 'Wind (km/h)',
       data: winds,
-      yAxisID: 'yRight',
+      yAxisID: mode === 'both' ? 'yRight2' : 'yRight',
       borderColor: 'rgb(255,159,64)',
-      backgroundColor: 'rgba(255,159,64,0.1)',
-      tension: 0.2
-    });
-  } else if (mode === 'both') {
-    datasets.push({
-      label: 'Precip %',
-      data: rains,
-      yAxisID: 'yRight',
-      borderColor: 'rgb(54,162,235)',
-      backgroundColor: 'rgba(54,162,235,0.08)',
-      tension: 0.2
-    });
-    datasets.push({
-      label: 'Wind (km/h)',
-      data: winds,
-      yAxisID: 'yRight2',
-      borderColor: 'rgb(255,159,64)',
-      backgroundColor: 'rgba(255,159,64,0.08)',
-      tension: 0.2,
-      borderDash: [6,4]
+      tension: 0.25,
+      borderDash: mode === 'both' ? [5,3] : []
     });
   }
 
-  if (chart) chart.destroy();
   chart = new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
-      stacked: false,
       scales: {
-        x: {
-          title: { display: true, text: 'Date & Time' },
-          ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 12 }
-        },
-        y: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          title: { display: true, text: 'Temp (°C)' }
-        },
-        yRight: {
-          type: 'linear',
-          display: (mode !== 'none'),
-          position: 'right',
-          title: { display: true, text: (mode === 'wind' ? 'Wind (km/h)' : 'Precip %') },
-          grid: { drawOnChartArea: false },
-          min: 0
-        },
-        yRight2: {
-          type: 'linear',
-          display: (mode === 'both'),
-          position: 'right',
-          title: { display: true, text: 'Wind (km/h)' },
-          grid: { drawOnChartArea: false },
-          offset: true,
-          min: 0
-        }
+        x: { ticks: { maxTicksLimit: 10, maxRotation: 45, autoSkip: true } },
+        y: { position: 'left', suggestedMin: -5, suggestedMax: 40 },
+        yRight: { position: 'right', min: 0, grid: { drawOnChartArea: false } },
+        yRight2: { position: 'right', min: 0, display: mode === 'both', grid: { drawOnChartArea: false } }
       },
-      plugins: {
-        legend: { position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const label = context.dataset.label || '';
-              const value = context.formattedValue;
-              if (label.includes('Precip')) return label + ': ' + value + '%';
-              if (label.includes('Wind')) return label + ': ' + value + ' km/h';
-              if (label.includes('Temp')) return label + ': ' + value + ' °C';
-              return label + ': ' + value;
-            }
-          }
-        }
-      }
+      plugins: { legend: { position: 'top' } }
     }
   });
 }
