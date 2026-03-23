@@ -3,424 +3,845 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#3498db">
-  <meta name="description" content="Weather forecast – table & chart">
-  <title>Weather Forecast</title>
-
-  <link rel="manifest" href="/manifest.json">
-
-  <!-- Lucide icons -->
-  <script src="https://unpkg.com/lucide@0.454.0"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+  <meta name="theme-color" content="#0d0f14">
+  <title>Atmosphere · Weather</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Instrument+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --primary: #3498db;
-      --bg: #f5f5f5;
-      --card: white;
-      --text: #333;
+      --bg:      #0d0f14;
+      --bg2:     #13161d;
+      --bg3:     #1a1e28;
+      --border:  rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.13);
+      --text:    #e8eaf0;
+      --text2:   #8a8fa8;
+      --text3:   #555b72;
+      --accent:  #4f9cf9;
+      --warm:    #f97316;
+      --cold:    #38bdf8;
+      --rain:    #818cf8;
+      --good:    #34d399;
     }
-    * { box-sizing: border-box; margin:0; padding:0; }
+
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: system-ui, sans-serif;
+      font-family: 'Instrument Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100dvh;
-      padding: 1rem;
-      line-height: 1.5;
+      overflow-x: hidden;
     }
-    h1 {
-      text-align: center;
-      margin-bottom: 1.2rem;
-      font-size: clamp(1.6rem, 5vw, 2.2rem);
-    }
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      justify-content: center;
-      margin-bottom: 1.5rem;
-    }
-    .controls input, .controls button, .controls label {
-      padding: 0.55rem 1.1rem;
-      font-size: 1rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    .controls button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .controls button:hover { background: #2980b9; }
-    .filter.active { background: #2c3e50 !important; color: white; }
-    .lucide {
-      width: 1.4em;
-      height: 1.4em;
-      stroke-width: 2;
-    }
-    #current {
-      margin: 0 auto 1.5rem;
-      max-width: 640px;
-      padding: 1.3rem;
-      background: var(--card);
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-      display: flex;
-      align-items: center;
-      gap: 1.3rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    #currentIcon .lucide { width: 90px; height: 90px; stroke-width: 1.4; }
-    #currentText h2 { margin: 0; font-size: 1.6rem; }
-    #currentTemp { font-size: 2.8rem; font-weight: 700; }
-    #status { text-align: center; min-height: 3rem; padding: 1rem; }
-    .loader {
-      border: 6px solid #f3f3f3;
-      border-top: 6px solid var(--primary);
-      border-radius: 50%;
-      width: 40px; height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 1.5rem auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #error { color: #c0392b; font-weight: bold; }
-    table#forecast {
-      width: 100%;
-      max-width: 1000px;
-      margin: 0 auto 2rem;
-      border-collapse: collapse;
-      background: var(--card);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    }
-    #forecast th, #forecast td {
-      padding: 0.8rem;
-      text-align: center;
-      border-bottom: 1px solid #eee;
-    }
-    #forecast th { background: #f8f9fa; font-weight: 600; }
-    #forecast tr:hover { background: #f0f8ff; }
-    #forecast .lucide { width: 48px; height: 48px; stroke-width: 1.6; }
-    #chartContainer {
-      width: 100%;
-      max-width: 1000px;
-      height: clamp(320px, 65vh, 480px);
-      margin: 0 auto;
-      position: relative;
-      background: var(--card);
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-    }
-    canvas { width: 100% !important; height: 100% !important; }
 
-    @media (max-width: 640px) {
-      body { padding: 0.8rem; }
-      .controls { flex-direction: column; align-items: stretch; }
-      #current { flex-direction: column; text-align: center; padding: 1rem; }
-      #currentTemp { font-size: 2.4rem; }
-      #forecast th, #forecast td { font-size: 0.92rem; padding: 0.7rem; }
+    /* subtle dot-grid background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: radial-gradient(rgba(79,156,249,0.08) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.85rem 1.5rem;
+      background: rgba(13,15,20,0.88);
+      backdrop-filter: blur(20px) saturate(1.4);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 1.1rem;
+      letter-spacing: -0.02em; color: var(--text);
+      flex-shrink: 0; user-select: none;
+    }
+    .logo-dot { color: var(--accent); }
+
+    .search-wrap {
+      flex: 1; max-width: 400px; margin: 0 auto; position: relative;
+    }
+    .search-wrap input {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 99px;
+      padding: 0.55rem 2.8rem 0.55rem 1.1rem;
+      font-family: inherit; font-size: 0.875rem;
+      color: var(--text); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-wrap input::placeholder { color: var(--text3); }
+    .search-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,156,249,0.14);
+    }
+    .search-btn {
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      width: 28px; height: 28px; border-radius: 50%;
+      border: none; background: var(--accent); color: white;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .search-btn:hover { background: #3b82f6; transform: translateY(-50%) scale(1.08); }
+    .search-btn:active { transform: translateY(-50%) scale(0.96); }
+
+    .header-actions { display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0; }
+    .icon-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1px solid var(--border2); background: var(--bg3);
+      color: var(--text2); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .icon-btn.saved { border-color: var(--good); color: var(--good); }
+
+    /* ─── LANDING ─── */
+    #landing {
+      position: relative; z-index: 1;
+      min-height: calc(100dvh - 57px);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 3rem 1.5rem; gap: 1.5rem;
+    }
+    .orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(110px); pointer-events: none; z-index: 0;
+    }
+    .orb-a { width: 540px; height: 540px; background: rgba(79,156,249,0.07); top: -120px; left: 50%; transform: translateX(-50%); }
+    .orb-b { width: 280px; height: 280px; background: rgba(124,58,237,0.09); bottom: 60px; right: 8%; }
+
+    .eyebrow {
+      position: relative; z-index: 1;
+      font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid rgba(79,156,249,0.25);
+      padding: 0.3rem 0.9rem; border-radius: 99px;
+      background: rgba(79,156,249,0.06);
+    }
+    .landing-title {
+      position: relative; z-index: 1;
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-weight: 800; line-height: 1.0; letter-spacing: -0.035em;
+    }
+    .landing-title em {
+      font-style: italic; font-family: 'Instrument Sans', sans-serif;
+      font-weight: 400; color: var(--text2);
+    }
+    .landing-sub {
+      position: relative; z-index: 1;
+      font-size: 1rem; color: var(--text2); max-width: 360px; line-height: 1.6;
+    }
+
+    /* ─── STATUS ─── */
+    #status {
+      position: relative; z-index: 1;
+      min-height: 2rem;
+      display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+      font-size: 0.85rem; color: var(--text2);
+    }
+    .dots { display: flex; gap: 5px; }
+    .dots span {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+      animation: pdot 1.4s ease-in-out infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pdot {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.7); }
+      40%            { opacity: 1;   transform: scale(1); }
+    }
+    .err { color: #f87171; }
+
+    /* ─── DASHBOARD ─── */
+    #dashboard {
+      display: none; position: relative; z-index: 1;
+      max-width: 1060px; margin: 0 auto;
+      padding: 1.5rem 1.5rem 5rem;
+      gap: 1rem; flex-direction: column;
+      animation: fadeup 0.45s ease both;
+    }
+    #dashboard.show { display: flex; }
+    @keyframes fadeup {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── CURRENT CARD ─── */
+    .current-card {
+      border-radius: 20px; border: 1px solid var(--border2);
+      background: var(--bg2); padding: 1.75rem 2rem;
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 1rem; align-items: center; position: relative; overflow: hidden;
+    }
+    .current-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 65% 80% at 92% 15%, rgba(79,156,249,0.09) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cur-location {
+      font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text3); margin-bottom: 0.3rem;
+    }
+    .cur-temp {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(3.8rem, 9vw, 6.5rem);
+      font-weight: 800; line-height: 1; letter-spacing: -0.04em;
+    }
+    .cur-desc {
+      margin-top: 0.3rem; font-size: 1rem;
+      color: var(--text2); text-transform: capitalize;
+    }
+    .cur-pills {
+      margin-top: 1.1rem; display: flex; flex-wrap: wrap; gap: 0.45rem;
+    }
+    .pill {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.32rem 0.75rem; border-radius: 99px;
+      border: 1px solid var(--border2); background: var(--bg3);
+      font-size: 0.78rem; color: var(--text2);
+    }
+    .cur-icon-wrap {
+      width: clamp(72px, 13vw, 120px); height: clamp(72px, 13vw, 120px);
+      flex-shrink: 0;
+    }
+    .cur-icon-wrap svg { width: 100%; height: 100%; }
+
+    /* ─── TOOLBAR ─── */
+    .toolbar {
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .seg {
+      display: flex; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 3px; gap: 2px;
+    }
+    .seg-btn {
+      padding: 0.38rem 0.85rem; border-radius: 7px;
+      border: none; background: transparent;
+      font-family: inherit; font-size: 0.8rem; font-weight: 500;
+      color: var(--text3); cursor: pointer; transition: all 0.18s;
+      white-space: nowrap;
+    }
+    .seg-btn.active { background: var(--bg3); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+    #metricGroup .seg-btn.active { color: var(--accent); }
+
+    /* ─── CHART ─── */
+    .chart-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 1.25rem 1.25rem 1rem;
+      height: clamp(240px, 35vh, 340px); position: relative;
+    }
+
+    /* ─── TABLE ─── */
+    .table-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 20px; overflow: hidden;
+    }
+    .table-header {
+      padding: 1rem 1.25rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: baseline; gap: 0.75rem;
+    }
+    .table-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;
+    }
+    .table-header .count { font-size: 0.75rem; color: var(--text3); }
+    .tbl-scroll { overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      padding: 0.55rem 1rem; text-align: left;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.67rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text3);
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 0.75rem 1rem; font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text2); vertical-align: middle; white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.018); }
+    tbody tr.hi-rain { background: rgba(129,140,248,0.04); }
+    tbody tr.hi-wind { background: rgba(249,115,22,0.04); }
+
+    .time-col { display: flex; flex-direction: column; gap: 2px; }
+    .t-date { font-size: 0.7rem; color: var(--text3); }
+    .t-hour { font-weight: 500; color: var(--text); font-size: 0.88rem; }
+
+    .temp-val { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--text); }
+    .feels-val { font-size: 0.72rem; color: var(--text3); display: block; }
+
+    .rain-wrap { display: flex; align-items: center; gap: 0.5rem; }
+    .rain-track { width: 44px; height: 3px; border-radius: 99px; background: var(--bg3); overflow: hidden; }
+    .rain-fill  { height: 100%; border-radius: 99px; background: var(--rain); }
+    .rain-pct   { font-size: 0.8rem; color: var(--text2); min-width: 2rem; }
+
+    .wind-wrap { display: flex; align-items: center; gap: 0.35rem; }
+    .wind-dir  { font-size: 0.65rem; font-weight: 600; color: var(--text3); letter-spacing: 0.05em; }
+
+    .type-tag {
+      display: inline-block; padding: 0.14rem 0.52rem;
+      border-radius: 5px; font-size: 0.7rem; font-weight: 500;
+    }
+    .t-rain { background: rgba(129,140,248,0.15); color: var(--rain); }
+    .t-snow { background: rgba(56,189,248,0.12);  color: var(--cold); }
+    .t-none { background: rgba(255,255,255,0.05);  color: var(--text3); }
+
+    .uv-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 6px;
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .uv-z  { background: rgba(255,255,255,0.05); color: var(--text3); }
+    .uv-lo { background: rgba(52,211,153,0.15);  color: var(--good); }
+    .uv-mi { background: rgba(249,115,22,0.15);  color: var(--warm); }
+    .uv-hi { background: rgba(248,113,113,0.15); color: #f87171; }
+
+    .w-icon { width: 32px; height: 32px; display: block; }
+
+    @media (max-width: 600px) {
+      .current-card { grid-template-columns: 1fr; }
+      .cur-icon-wrap { display: none; }
+      thead th:nth-child(n+6), tbody td:nth-child(n+6) { display: none; }
+      #dashboard { padding: 1rem 1rem 3rem; }
     }
   </style>
 </head>
 <body>
 
-<h1>Weather Forecast</h1>
+<!-- ═ HEADER ═════════════════════════════════════════════════════ -->
+<header>
+  <div class="logo">atmo<span class="logo-dot">.</span></div>
 
-<div class="controls">
-  <input id="city" placeholder="City (e.g. Tournus, FR)" value="">
-  <button id="loadBtn"><i data-lucide="search" class="lucide"></i> Load</button>
-  <button id="saveBtn"><i data-lucide="bookmark" class="lucide"></i> Save</button>
-  <button id="refreshBtn"><i data-lucide="refresh-cw" class="lucide"></i></button>
-
-  <button class="filter" data-range="24">24 h</button>
-  <button class="filter" data-range="72">3 d</button>
-  <button class="filter" data-range="120">5 d</button>
-
-  <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-top:0.4rem;">
-    <label><input type="radio" name="metric" value="rain" checked> Rain %</label>
-    <label><input type="radio" name="metric" value="wind"> Wind</label>
-    <label><input type="radio" name="metric" value="both"> Both</label>
+  <div class="search-wrap">
+    <input id="cityInput" type="text" placeholder="City… e.g. Tokyo, JP" autocomplete="off" spellcheck="false">
+    <button class="search-btn" id="loadBtn" aria-label="Search">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </button>
   </div>
-</div>
 
-<div id="current" style="display:none;">
-  <div id="currentIcon"></div>
-  <div id="currentText">
-    <h2 id="currentCity"></h2>
-    <div id="currentTemp"></div>
-    <div id="currentFeels"></div>
-    <div id="currentDesc"></div>
+  <div class="header-actions">
+    <button class="icon-btn" id="saveBtn" title="Save city">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="refreshBtn" title="Refresh">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+    </button>
   </div>
-</div>
+</header>
 
-<div id="status"></div>
+<!-- ═ LANDING ════════════════════════════════════════════════════ -->
+<section id="landing">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="eyebrow">Live weather forecast</div>
+  <h1 class="landing-title">Your sky,<br><em>decoded.</em></h1>
+  <p class="landing-sub">Hyper-local 5-day forecasts with charts and hourly detail.</p>
+  <div id="status"></div>
+</section>
 
-<table id="forecast" hidden>
-  <thead>
-    <tr>
-      <th>Time</th>
-      <th></th>
-      <th>Weather</th>
-      <th>Temp</th>
-      <th>Feels</th>
-      <th>Wind</th>
-      <th>Rain %</th>
-      <th>Type</th>
-      <th>UV</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+<!-- ═ DASHBOARD ══════════════════════════════════════════════════ -->
+<main id="dashboard">
 
-<div id="chartContainer">
-  <canvas id="myChart"></canvas>
-</div>
+  <div class="current-card">
+    <div>
+      <div class="cur-location" id="curCity">—</div>
+      <div class="cur-temp"     id="curTemp">—</div>
+      <div class="cur-desc"     id="curDesc">—</div>
+      <div class="cur-pills">
+        <span class="pill">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+          Feels <span id="curFeels">—</span>
+        </span>
+        <span class="pill">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+          <span id="curHumidity">—</span>
+        </span>
+        <span class="pill">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+          <span id="curWind">—</span>
+        </span>
+        <span class="pill">☀ UV <span id="curUV">—</span></span>
+      </div>
+    </div>
+    <div class="cur-icon-wrap">
+      <svg id="curIcon" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="seg" id="rangeGroup">
+      <button class="seg-btn active" data-range="24">24 h</button>
+      <button class="seg-btn"        data-range="72">3 days</button>
+      <button class="seg-btn"        data-range="120">5 days</button>
+    </div>
+    <div class="seg" id="metricGroup">
+      <button class="seg-btn active" data-metric="rain">Rain %</button>
+      <button class="seg-btn"        data-metric="wind">Wind</button>
+      <button class="seg-btn"        data-metric="both">Both</button>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <canvas id="myChart"></canvas>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h2>Hourly breakdown</h2>
+      <span class="count" id="rowCount"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th></th>
+            <th>Conditions</th>
+            <th>Temp</th>
+            <th>Wind</th>
+            <th>Rain %</th>
+            <th>Type</th>
+            <th>UV</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
 
 <script>
-// ────────────────────────────────────────────────
-const API_KEY = 'ca699b20eac9fac41390137b6cbfc66b'; // ← replace
+// ── API KEY (original, unchanged) ────────────────────────────────
+const API_KEY = 'ca699b20eac9fac41390137b6cbfc66b';
 
-// Lucide icon mapping
-function getWeatherIcon(desc = '') {
-  const s = desc.toLowerCase();
-  if (s.includes('rain') || s.includes('shower') || s.includes('drizzle')) return 'cloud-rain';
-  if (s.includes('snow')) return 'snowflake';
-  if (s.includes('thunder') || s.includes('storm')) return 'cloud-lightning';
-  if (s.includes('cloud')) return 'cloud';
-  if (s.includes('fog') || s.includes('mist')) return 'cloud-fog';
-  if (s.includes('clear') || s.includes('sunny')) return 'sun';
-  return 'cloud';
-}
+// ── STATE ────────────────────────────────────────────────────────
+let fullData     = [];
+let chart        = null;
+let activeRange  = 24;
+let activeMetric = 'rain';
+let currentUV    = 0;
 
-// Elements
-const cityInp    = document.getElementById('city');
+// ── ELEMENTS ─────────────────────────────────────────────────────
+const cityInput  = document.getElementById('cityInput');
 const loadBtn    = document.getElementById('loadBtn');
 const saveBtn    = document.getElementById('saveBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const statusDiv  = document.getElementById('status');
-const table      = document.getElementById('forecast');
-const tbody      = table.tBodies[0];
-const filterBtns = document.querySelectorAll('.filter');
-const metricRadios = document.querySelectorAll('input[name="metric"]');
+const landing    = document.getElementById('landing');
+const dashboard  = document.getElementById('dashboard');
+const tbody      = document.getElementById('tbody');
 const ctx        = document.getElementById('myChart').getContext('2d');
 
-let fullData = [];
-let chart = null;
-let currentUV = 0;
+// ── BOOT ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('weatherCity');
+  if (saved) { cityInput.value = saved; fetchForecast(saved); }
+});
 
-// ────────────────────────────────────────────────
-// Service Worker + update handling
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => {
-        reg.addEventListener('updatefound', () => {
-          const installing = reg.installing;
-          if (installing) {
-            installing.addEventListener('statechange', () => {
-              if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-                if (confirm('New version available. Reload now?')) {
-                  window.location.reload();
-                }
-              }
-            });
-          }
-        });
-      })
-      .catch(err => console.warn('Service Worker failed:', err));
+// ── EVENTS ───────────────────────────────────────────────────────
+loadBtn.onclick    = () => { const c = cityInput.value.trim(); if (c) fetchForecast(c); };
+refreshBtn.onclick = () => { const c = cityInput.value.trim(); if (c) fetchForecast(c); };
+
+// FIX: Enter key submits search
+cityInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadBtn.click(); });
+
+// FIX: save uses in-page feedback instead of alert()
+saveBtn.onclick = () => {
+  const c = cityInput.value.trim();
+  if (!c) return;
+  localStorage.setItem('weatherCity', c);
+  saveBtn.classList.add('saved');
+  setTimeout(() => saveBtn.classList.remove('saved'), 2000);
+};
+
+// Range buttons — FIX: call render directly, no fake .click() chain
+document.getElementById('rangeGroup').addEventListener('click', e => {
+  const btn = e.target.closest('[data-range]');
+  if (!btn) return;
+  document.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeRange = +btn.dataset.range;
+  renderTable();
+  renderChart();
+});
+
+// Metric buttons
+document.getElementById('metricGroup').addEventListener('click', e => {
+  const btn = e.target.closest('[data-metric]');
+  if (!btn) return;
+  document.querySelectorAll('[data-metric]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeMetric = btn.dataset.metric;
+  renderChart();
+});
+
+// ── FETCH ────────────────────────────────────────────────────────
+async function fetchForecast(city) {
+  setStatus('loading');
+  fullData = [];
+  dashboard.classList.remove('show');
+
+  try {
+    const geo = await apiFetch(
+      `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API_KEY}`
+    );
+    if (!geo.length) throw new Error('City not found. Try "Paris, FR".');
+    const { lat, lon, name, country } = geo[0];
+
+    // FIX: parallel fetch instead of sequential
+    const [cur, fc] = await Promise.all([
+      apiFetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`),
+      apiFetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`)
+    ]);
+
+    if (!fc.list) throw new Error('No forecast data returned.');
+
+    // Current conditions
+    currentUV = Math.round(cur.uvi ?? 0);
+    const desc = cur.weather?.[0]?.description ?? '—';
+
+    document.getElementById('curCity').textContent     = `${name}, ${country}`;
+    document.getElementById('curTemp').textContent     = `${Math.round(cur.main.temp)}°C`;
+    document.getElementById('curDesc').textContent     = desc;
+    document.getElementById('curFeels').textContent    = `${Math.round(cur.main.feels_like)}°C`;
+    document.getElementById('curHumidity').textContent = `${cur.main.humidity}% humidity`;
+    document.getElementById('curWind').textContent     = `${Math.round((cur.wind?.speed||0)*3.6)} km/h`;
+    document.getElementById('curUV').textContent       = currentUV;
+    setIconSVG(document.getElementById('curIcon'), desc, 120);
+
+    // FIX: use raw 3-hour slots — no fake hourly duplication
+    fc.list.forEach(block => {
+      const dt = new Date(block.dt * 1000);
+      const summary = block.weather?.[0]?.description || '—';
+      const hour    = dt.getHours();
+      const uv      = (hour >= 6 && hour <= 18) ? currentUV : 0;
+
+      fullData.push({
+        dt,
+        // FIX: fixed locale so labels are consistent across all systems
+        dateStr:     dt.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }),
+        hourStr:     String(hour).padStart(2, '0') + ':00',
+        summary,
+        temp:        Math.round(block.main.temp),
+        feels:       Math.round(block.main.feels_like),
+        windKmh:     Math.round((block.wind?.speed || 0) * 3.6),
+        windDir:     degToCompass(block.wind?.deg || 0),
+        rain:        Math.round((block.pop || 0) * 100),
+        precipType:  block.rain?.['3h'] ? 'Rain' : block.snow?.['3h'] ? 'Snow' : 'None',
+        uv
+      });
+    });
+
+    cityInput.value = `${name}, ${country}`;
+    setStatus('');
+    landing.style.display = 'none';
+    dashboard.classList.add('show');
+
+    // FIX: set initial state explicitly, no DOM .click() chain
+    activeRange  = 24;
+    activeMetric = 'rain';
+    document.querySelectorAll('[data-range]').forEach(b => b.classList.toggle('active', b.dataset.range === '24'));
+    document.querySelectorAll('[data-metric]').forEach(b => b.classList.toggle('active', b.dataset.metric === 'rain'));
+    renderTable();
+    renderChart();
+
+  } catch (err) {
+    setStatus('error', err.message);
+  }
+}
+
+async function apiFetch(url) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    // FIX: differentiate error types
+    if (res.status === 401) throw new Error('Invalid API key.');
+    if (res.status === 429) throw new Error('Rate limit reached. Please wait.');
+    throw new Error(`API error (${res.status}).`);
+  }
+  return res.json();
+}
+
+// ── RENDER TABLE ─────────────────────────────────────────────────
+function renderTable() {
+  // Each fullData entry = 3 hours. Slice to cover activeRange hours.
+  const sliceCount = Math.round(activeRange / 3);
+  const slice      = fullData.slice(0, sliceCount);
+
+  document.getElementById('rowCount').textContent =
+    `${slice.length} slots · ${activeRange}h window`;
+
+  tbody.innerHTML = '';
+  slice.forEach(r => {
+    const tr = document.createElement('tr');
+    if (r.rain > 60)     tr.classList.add('hi-rain');
+    if (r.windKmh > 40)  tr.classList.add('hi-wind');
+
+    tr.innerHTML = `
+      <td>
+        <div class="time-col">
+          <span class="t-date">${r.dateStr}</span>
+          <span class="t-hour">${r.hourStr}</span>
+        </div>
+      </td>
+      <td>${iconMini(r.summary)}</td>
+      <td style="text-transform:capitalize;max-width:130px;overflow:hidden;text-overflow:ellipsis">${r.summary}</td>
+      <td>
+        <span class="temp-val" style="color:${tempColor(r.temp)}">${r.temp}°C</span>
+        <span class="feels-val">feels ${r.feels}°C</span>
+      </td>
+      <td>
+        <div class="wind-wrap">
+          <span style="color:var(--text)">${r.windKmh}</span>
+          <span style="color:var(--text3);font-size:.75rem">km/h</span>
+          <span class="wind-dir">${r.windDir}</span>
+        </div>
+      </td>
+      <td>
+        <div class="rain-wrap">
+          <div class="rain-track"><div class="rain-fill" style="width:${r.rain}%"></div></div>
+          <span class="rain-pct">${r.rain}%</span>
+        </div>
+      </td>
+      <td><span class="type-tag ${precipClass(r.precipType)}">${r.precipType}</span></td>
+      <td>${uvBadge(r.uv)}</td>
+    `;
+    tbody.appendChild(tr);
   });
 }
 
-// ────────────────────────────────────────────────
-// Init Lucide once
-lucide.createIcons();
+// ── RENDER CHART ─────────────────────────────────────────────────
+// FIX: update existing chart in place instead of destroy + recreate
+function renderChart() {
+  const sliceCount = Math.round(activeRange / 3);
+  const slice      = fullData.slice(0, sliceCount);
 
-// Load saved city
-window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('weatherCity');
-  if (saved) {
-    cityInp.value = saved;
-    fetchForecast(saved);
-  }
-  lucide.createIcons();
-});
+  const labels = slice.map(d => `${d.dateStr} ${d.hourStr}`);
+  const temps  = slice.map(d => d.temp);
+  const rains  = slice.map(d => d.rain);
+  const winds  = slice.map(d => d.windKmh);
 
-// Handlers
-loadBtn.onclick    = () => { const c = cityInp.value.trim(); if (c) fetchForecast(c); };
-saveBtn.onclick    = () => { const c = cityInp.value.trim(); if (c) { localStorage.setItem('weatherCity', c); alert('City saved'); } };
-refreshBtn.onclick = () => { const c = cityInp.value.trim(); if (c) fetchForecast(c); };
+  const datasets = [
+    {
+      label: 'Temp (°C)',
+      data: temps, yAxisID: 'yTemp',
+      borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.07)',
+      fill: true, tension: 0.35, pointRadius: 0, pointHitRadius: 12, borderWidth: 2
+    }
+  ];
 
-filterBtns.forEach(btn => {
-  btn.onclick = () => {
-    filterBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const hrs = Number(btn.dataset.range);
-    displayRows(hrs);
-    updateChart(hrs);
-  };
-});
-
-metricRadios.forEach(r => r.onchange = () => updateChart(tbody.children.length || 24));
-
-// ────────────────────────────────────────────────
-async function fetchForecast(city) {
-  statusDiv.innerHTML = '<div class="loader"></div>';
-  table.hidden = true;
-  tbody.innerHTML = '';
-  fullData = [];
-  document.getElementById('current').style.display = 'none';
-
-  try {
-    // Geocoding
-    const geo = await (await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API_KEY}`)).json();
-    if (!geo.length) throw new Error('City not found');
-    const { lat, lon, name, country } = geo[0];
-
-    // Current
-    const cur = await (await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`)).json();
-    currentUV = Math.round(cur.uvi ?? 0);
-    const curDesc = cur.weather?.[0]?.description ?? '—';
-    const curIcon = getWeatherIcon(curDesc);
-    const curTemp = Math.round(cur.main.temp);
-    const feels = Math.round(cur.main.feels_like);
-
-    document.getElementById('currentCity').textContent = `${name}, ${country}`;
-    document.getElementById('currentTemp').textContent = `${curTemp}°C`;
-    document.getElementById('currentFeels').textContent = `Feels like ${feels}°C`;
-    document.getElementById('currentDesc').textContent = curDesc;
-    document.getElementById('currentIcon').innerHTML = `<i data-lucide="${curIcon}" class="lucide"></i>`;
-    document.getElementById('current').style.display = 'flex';
-
-    // Forecast
-    const forecast = await (await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`)).json();
-    if (!forecast.list) throw new Error('No forecast data');
-
-    forecast.list.forEach(block => {
-      const start = new Date(block.dt * 1000);
-      const temp = Math.round(block.main.temp);
-      const feels_like = Math.round(block.main.feels_like);
-      const windKmh = Math.round((block.wind?.speed || 0) * 3.6);
-      const windDir = degToCompass(block.wind?.deg || 0);
-      const precipProb = Math.round((block.pop || 0) * 100);
-      const precipType = block.rain?.['3h'] ? 'Rain' : block.snow?.['3h'] ? 'Snow' : 'None';
-      const summary = block.weather?.[0]?.description || '—';
-      const iconName = getWeatherIcon(summary);
-      const hour = start.getHours();
-      const uv = (hour >= 6 && hour <= 18) ? currentUV : 0;
-
-      for (let i = 0; i < 3; i++) {
-        const t = new Date(start.getTime() + i * 3600000);
-        const dateStr = t.toLocaleDateString(undefined, {month:'short', day:'numeric'});
-        const hourStr = t.getHours().toString().padStart(2,'0') + ':00';
-        fullData.push({
-          datetime: `${dateStr} ${hourStr}`,
-          iconName, summary, temp, feels_like, windKmh, windDir, precipProb, precipType, uv
-        });
-      }
+  if (activeMetric === 'rain' || activeMetric === 'both') {
+    datasets.push({
+      label: 'Rain %',
+      data: rains, yAxisID: 'yRight',
+      borderColor: '#818cf8', backgroundColor: 'rgba(129,140,248,0.07)',
+      fill: true, tension: 0.35, pointRadius: 0, pointHitRadius: 12, borderWidth: 2
     });
+  }
+  if (activeMetric === 'wind' || activeMetric === 'both') {
+    datasets.push({
+      label: 'Wind (km/h)',
+      data: winds,
+      yAxisID: activeMetric === 'both' ? 'yRight2' : 'yRight',
+      borderColor: '#34d399',
+      tension: 0.35, pointRadius: 0, pointHitRadius: 12, borderWidth: 2,
+      borderDash: activeMetric === 'both' ? [5, 3] : []
+    });
+  }
 
-    statusDiv.innerHTML = '';
-    document.querySelector('.filter[data-range="24"]').click();
-    lucide.createIcons();
+  const scalesConfig = {
+    x: {
+      ticks: { maxTicksLimit: 10, maxRotation: 30, autoSkip: true, color: '#555b72', font: { size: 11 } },
+      grid:  { color: 'rgba(255,255,255,0.04)' },
+      border: { color: 'rgba(255,255,255,0.06)' }
+    },
+    yTemp: {
+      position: 'left', suggestedMin: -5, suggestedMax: 40,
+      ticks: { color: '#f97316', font: { size: 11 }, callback: v => v + '°' },
+      grid:  { color: 'rgba(255,255,255,0.04)' },
+      border: { color: 'rgba(255,255,255,0.06)' }
+    },
+    yRight: {
+      position: 'right', min: 0,
+      ticks: { color: '#818cf8', font: { size: 11 } },
+      grid:  { drawOnChartArea: false },
+      border: { color: 'rgba(255,255,255,0.06)' }
+    },
+    // FIX: yRight2 display tied to activeMetric correctly
+    yRight2: {
+      position: 'right', min: 0,
+      display: activeMetric === 'both',
+      ticks: { color: '#34d399', font: { size: 11 } },
+      grid:  { drawOnChartArea: false },
+      border: { color: 'rgba(255,255,255,0.06)' }
+    }
+  };
 
-  } catch (err) {
-    statusDiv.innerHTML = `<div id="error">Error: ${err.message}</div>`;
+  if (!chart) {
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: buildChartOptions(scalesConfig)
+    });
+  } else {
+    chart.data.labels   = labels;
+    chart.data.datasets = datasets;
+    chart.options       = buildChartOptions(scalesConfig);
+    chart.update('active');
   }
 }
 
+function buildChartOptions(scales) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    animation: { duration: 280 },
+    scales,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          color: '#8a8fa8', font: { size: 11 },
+          boxWidth: 12, boxHeight: 2, padding: 16
+        }
+      },
+      tooltip: {
+        backgroundColor: '#1a1e28',
+        borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+        titleColor: '#e8eaf0', bodyColor: '#8a8fa8',
+        padding: 12, cornerRadius: 10
+      }
+    }
+  };
+}
+
+// ── WEATHER ICONS (inline SVG, no external lib) ───────────────────
+function setIconSVG(el, desc, size) {
+  el.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  el.innerHTML = iconPaths(desc, size);
+}
+
+function iconMini(desc) {
+  return `<svg class="w-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">${iconPaths(desc, 40)}</svg>`;
+}
+
+function iconPaths(desc, s) {
+  const d = (desc || '').toLowerCase();
+  const c = s / 2;
+
+  if (d.includes('thunder') || d.includes('storm')) {
+    return cloud(c, c * 0.68, s) +
+      `<polygon points="${c-s*.05},${c*.95} ${c-s*.14},${c*1.2} ${c+s*.02},${c*1.15}
+                       ${c-s*.04},${c*1.4} ${c+s*.18},${c*1.05} ${c+s*.06},${c*1.05}
+                       ${c+s*.12},${c*.82}"
+               fill="#fbbf24"/>`;
+  }
+  if (d.includes('snow')) {
+    return cloud(c, c * 0.68, s) +
+      `<text x="${c - s*0.16}" y="${c*1.38}" font-size="${s*0.2}" fill="#7dd3fc">❄</text>
+       <text x="${c + s*0.05}" y="${c*1.38}" font-size="${s*0.2}" fill="#7dd3fc">❄</text>`;
+  }
+  if (d.includes('rain') || d.includes('shower') || d.includes('drizzle')) {
+    const w = s * 0.045;
+    return cloud(c, c * 0.68, s) +
+      `<line x1="${c-s*.16}" y1="${c*.98}" x2="${c-s*.22}" y2="${c*1.22}" stroke="#818cf8" stroke-width="${w}" stroke-linecap="round"/>
+       <line x1="${c}"       y1="${c*.98}" x2="${c-s*.06}"  y2="${c*1.22}" stroke="#818cf8" stroke-width="${w}" stroke-linecap="round"/>
+       <line x1="${c+s*.16}" y1="${c*.98}" x2="${c+s*.10}"  y2="${c*1.22}" stroke="#818cf8" stroke-width="${w}" stroke-linecap="round"/>`;
+  }
+  if (d.includes('fog') || d.includes('mist') || d.includes('haze')) {
+    return [0.32, 0.5, 0.68, 0.86].map((y, i) =>
+      `<rect x="${s*.1}" y="${s*y}" width="${s*(0.8 - i*0.1)}" height="${s*.07}" rx="${s*.035}"
+             fill="#64748b" opacity="${0.45 + i*0.13}"/>`
+    ).join('');
+  }
+  if (d.includes('clear') || d.includes('sunny')) return sun(c, s);
+  if (d.includes('partly') || d.includes('few') || d.includes('scatter') || d.includes('broken')) {
+    return `<g transform="translate(${-s*.1},${-s*.08})" opacity=".9">${sun(c, s)}</g>` +
+           cloud(c + s*.1, c + s*.1, s, 0.85);
+  }
+  return cloud(c, c, s);
+}
+
+function sun(c, s) {
+  const rays = [0,45,90,135,180,225,270,315].map(a => {
+    const r = a * Math.PI / 180;
+    const x1 = c + Math.cos(r)*s*.36, y1 = c + Math.sin(r)*s*.36;
+    const x2 = c + Math.cos(r)*s*.46, y2 = c + Math.sin(r)*s*.46;
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+                  stroke="#fbbf24" stroke-width="${s*.055}" stroke-linecap="round"/>`;
+  }).join('');
+  return `<circle cx="${c}" cy="${c}" r="${s*.25}" fill="#fbbf24"/>${rays}`;
+}
+
+function cloud(cx, cy, s, scale = 1) {
+  const rx1 = s*.3*scale, ry1 = s*.18*scale;
+  const rx2 = s*.22*scale, ry2 = s*.14*scale;
+  const rx3 = s*.17*scale, ry3 = s*.12*scale;
+  return `<ellipse cx="${cx}"         cy="${cy}"          rx="${rx1}" ry="${ry1}" fill="#475569"/>
+          <ellipse cx="${cx-s*.1*scale}" cy="${cy+s*.08*scale}" rx="${rx2}" ry="${ry2}" fill="#475569"/>
+          <ellipse cx="${cx+s*.1*scale}" cy="${cy+s*.08*scale}" rx="${rx3}" ry="${ry3}" fill="#475569"/>`;
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────
 function degToCompass(deg) {
   const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   return dirs[Math.round(deg / 22.5) % 16] || '?';
 }
 
-function displayRows(hours) {
-  tbody.innerHTML = '';
-  const slice = fullData.slice(0, hours);
-  slice.forEach(r => {
-    const tr = document.createElement('tr');
-    if (r.precipProb > 60) tr.style.background = '#e3f2fd';
-    else if (r.windKmh > 40) tr.style.background = '#fff3e0';
-
-    tr.innerHTML = `
-      <td>${r.datetime}</td>
-      <td><i data-lucide="${r.iconName}" class="lucide"></i></td>
-      <td style="text-transform:capitalize;">${r.summary}</td>
-      <td>${r.temp}°C</td>
-      <td>${r.feels_like}°C</td>
-      <td>${r.windKmh} km/h ${r.windDir}</td>
-      <td>${r.precipProb}</td>
-      <td>${r.precipType}</td>
-      <td>${r.uv}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-  table.hidden = !slice.length;
-  lucide.createIcons();
+function tempColor(t) {
+  if (t <= 0)  return '#7dd3fc';
+  if (t <= 10) return '#38bdf8';
+  if (t <= 20) return '#34d399';
+  if (t <= 28) return '#fbbf24';
+  return '#f97316';
 }
 
-function updateChart(hours) {
-  if (chart) chart.destroy();
-  const mode = document.querySelector('input[name="metric"]:checked')?.value || 'rain';
-  const data = fullData.slice(0, hours);
-  const labels = data.map(d => d.datetime);
-  const temps = data.map(d => d.temp);
-  const rains = data.map(d => d.precipProb);
-  const winds = data.map(d => d.windKmh);
+function precipClass(t) {
+  return t === 'Rain' ? 't-rain' : t === 'Snow' ? 't-snow' : 't-none';
+}
 
-  const datasets = [{
-    label: 'Temperature (°C)',
-    data: temps,
-    yAxisID: 'y',
-    borderColor: 'rgb(75,192,192)',
-    tension: 0.25,
-    pointRadius: 3
-  }];
+function uvBadge(uv) {
+  if (!uv)   return `<span class="uv-badge uv-z">—</span>`;
+  if (uv<=2) return `<span class="uv-badge uv-lo">${uv}</span>`;
+  if (uv<=5) return `<span class="uv-badge uv-mi">${uv}</span>`;
+  return `<span class="uv-badge uv-hi">${uv}</span>`;
+}
 
-  if (mode === 'rain' || mode === 'both') {
-    datasets.push({
-      label: 'Rain %',
-      data: rains,
-      yAxisID: 'yRight',
-      borderColor: 'rgb(54,162,235)',
-      tension: 0.25
-    });
+function setStatus(type, msg = '') {
+  if (type === 'loading') {
+    statusDiv.innerHTML = `<div class="dots"><span></span><span></span><span></span></div> Fetching forecast…`;
+  } else if (type === 'error') {
+    statusDiv.innerHTML = `<span class="err">⚠ ${msg}</span>`;
+  } else {
+    statusDiv.innerHTML = '';
   }
-  if (mode === 'wind' || mode === 'both') {
-    datasets.push({
-      label: 'Wind (km/h)',
-      data: winds,
-      yAxisID: mode === 'both' ? 'yRight2' : 'yRight',
-      borderColor: 'rgb(255,159,64)',
-      tension: 0.25,
-      borderDash: mode === 'both' ? [5,3] : []
-    });
-  }
-
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      scales: {
-        x: { ticks: { maxTicksLimit: 10, maxRotation: 45, autoSkip: true } },
-        y: { position: 'left', suggestedMin: -5, suggestedMax: 40 },
-        yRight: { position: 'right', min: 0, grid: { drawOnChartArea: false } },
-        yRight2: { position: 'right', min: 0, display: mode === 'both', grid: { drawOnChartArea: false } }
-      },
-      plugins: { legend: { position: 'top' } }
-    }
-  });
 }
 </script>
 </body>
